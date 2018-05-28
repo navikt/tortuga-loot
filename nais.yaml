@@ -1,0 +1,27 @@
+name: tortuga-loot
+image: repo.adeo.no:5443/tortuga-loot
+replicas:
+  min: 1
+  max: 1
+resources:
+  limits:
+    cpu: 1000m
+    memory: 384Mi
+  requests:
+    cpu: 100m
+    memory: 256Mi
+prometheus:
+  enabled: true
+fasitResources:
+  used:
+    - alias: srvtortuga-loot
+      resourceType: credential
+      propertyMap:
+        username: KAFKA_USERNAME
+        password: KAFKA_PASSWORD
+    - alias: poppDB
+        resourceType: datasource
+        propertyMap:
+          url: DB_URL
+          username: DB_USERNAME
+          password: DB_PASSWORD
