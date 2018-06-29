@@ -51,7 +51,6 @@ public class PensjonsgivendeInntektToInntektSkattLagreInntektIT {
     public void consumeFromPensjonsgivendeInntektTopicAndCallInntektSkattLagreBeregnetSkatt() {
         List<PensjonsgivendeInntekt> pensjonsgivendeInntektList = getPensjonsgivendeInntektList();
         createTestRecords(pensjonsgivendeInntektList);
-
         final Application app = new Application(pensjonsgivendeInntektConsumer);
         //TODO: full component test
     }
@@ -60,13 +59,8 @@ public class PensjonsgivendeInntektToInntektSkattLagreInntektIT {
     public void consumeFromPensjonsgivendeInntektTopicOk() {
         List<PensjonsgivendeInntekt> initialPensjonsgivendeInntektList = getPensjonsgivendeInntektList();
         createTestRecords(initialPensjonsgivendeInntektList);
-        for(int i = 0; i < 10; i++) {
-            List<PensjonsgivendeInntekt> pensjonsgivendeInntektList = pensjonsgivendeInntektConsumer.poll();
-            for (int j = 0; j < pensjonsgivendeInntektList.size(); j++) {
-                System.out.println(pensjonsgivendeInntektList.get(j).getPersonidentifikator());
-            }
-        }
-        //assertTrue(pensjonsgivendeInntektList.size() > 0);
+        List<PensjonsgivendeInntekt> pensjonsgivendeInntektList = pensjonsgivendeInntektConsumer.poll();
+        //TODO: Control how many records are polled by specifying partition, and thus creating a better assert
     }
 
     private void createTestRecords(List<PensjonsgivendeInntekt> pensjonsgivendeInntektList) {

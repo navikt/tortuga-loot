@@ -6,9 +6,7 @@ import no.nav.opptjening.schema.PensjonsgivendeInntekt;
 import org.apache.kafka.clients.CommonClientConfigs;
 import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
-import org.apache.kafka.clients.consumer.ConsumerRebalanceListener;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
-import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.config.SaslConfigs;
 import org.apache.kafka.common.config.SslConfigs;
 import org.apache.kafka.common.serialization.StringDeserializer;
@@ -16,8 +14,6 @@ import org.apache.kafka.common.serialization.StringDeserializer;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.net.URL;
-import java.util.Collection;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -106,7 +102,7 @@ public class KafkaConfiguration {
         return configs;
     }
 
-    public Consumer<String, PensjonsgivendeInntekt> pensjonsgivendeInntektConsumer() {
+    public Consumer<String, PensjonsgivendeInntekt> getPensjonsgivendeInntektConsumer() {
         Map<String, Object> configs = getCommonConfigs();
         configs.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
         configs.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, KafkaAvroDeserializer.class);
@@ -117,21 +113,7 @@ public class KafkaConfiguration {
         configs.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, false);
         configs.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
 
-       Consumer<String, PensjonsgivendeInntekt> consumer = new KafkaConsumer<>(configs);
-
-        consumer.subscribe(Collections.singletonList(KafkaConfiguration.PENSJONSGIVENDE_INNTEKT_TOPIC), new ConsumerRebalanceListener() {
-            @Override
-            public void onPartitionsRevoked(Collection<TopicPartition> partitions) {
-                //LOG.info("Partition revoked: {}", partitions);
-            }
-
-            @Override
-            public void onPartitionsAssigned(Collection<TopicPartition> partitions) {
-                //LOG.info("Partitions assigned: {}", partitions);
-            }
-        });
-
-        return consumer;
+       return new KafkaConsumer<>(configs);
     }
 
     private static File resourceToFile(String path) throws FileNotFoundException {
