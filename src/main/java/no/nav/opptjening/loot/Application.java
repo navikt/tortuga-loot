@@ -1,60 +1,52 @@
 package no.nav.opptjening.loot;
 
-import no.nav.opptjening.loot.entity.InnlastingPgiOpptjeningDao;
-import no.nav.opptjening.loot.entity.InnlastingPgiOpptjeningService;
-import no.nav.opptjening.loot.entity.PersonDao;
-import no.nav.opptjening.loot.entity.PersonService;
-import no.nav.opptjening.nais.ApplicationRunner;
 import no.nav.opptjening.nais.NaisHttpServer;
+import no.nav.opptjening.schema.PensjonsgivendeInntekt;
+import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.SQLException;
-import java.util.Map;
+import java.util.List;
 
 public class Application {
 
     private static final Logger LOG = LoggerFactory.getLogger(Application.class);
+    private final PensjonsgivendeInntektConsumer pensjonsgivendeInntektConsumer;
 
-    public static void main(String [] args) {
+    public Application(PensjonsgivendeInntektConsumer pensjonsgivendeInntektConsumer) {
+        this.pensjonsgivendeInntektConsumer = pensjonsgivendeInntektConsumer;
+    }
 
-        Map<String, String> env = System.getenv();
+    public static void main(String[] args) {
 
-        ApplicationRunner appRunner;
+        final Application app;
 
         try {
-
             NaisHttpServer naisHttpServer = new NaisHttpServer();
-            KafkaConfiguration kafkaConfiguration = new KafkaConfiguration(env);
+            naisHttpServer.run();
 
-            PensjonsgivendeInntektConsumer pensjonsgivendeInntektConsumer = new PensjonsgivendeInntektConsumer(kafkaConfiguration.pensjonsgivendeInntektConsumer());
+            KafkaConfiguration kafkaConfiguration = new KafkaConfiguration(System.getenv());
+            PensjonsgivendeInntektConsumer pensjonsgivendeInntektConsumer =
+                    new PensjonsgivendeInntektConsumer(kafkaConfiguration.getPensjonsgivendeInntektConsumer());
 
-            Connection dbConnection = DriverManager.getConnection(env.get("DB_URL"), env.get("DB_USERNAME"), env.get("DB_PASSWORD"));
+            app = new Application(pensjonsgivendeInntektConsumer);
 
-            PersonDao personDao = new PersonDao.DefaultPersonDao(dbConnection);
-            PersonService personService = new PersonService(personDao);
+            Runtime.getRuntime().addShutdownHook(new Thread(pensjonsgivendeInntektConsumer::close));
 
-            InnlastingPgiOpptjeningDao innlastingPgiOpptjeningDao = new InnlastingPgiOpptjeningDao.DefaultInnlastingPgiOpptjeningDao(dbConnection);
-            InnlastingPgiOpptjeningService innlastingPgiOpptjeningService = new InnlastingPgiOpptjeningService(innlastingPgiOpptjeningDao, personService);
-
-            LagrePensjonsgivendeInntektTask task = new LagrePensjonsgivendeInntektTask(pensjonsgivendeInntektConsumer, innlastingPgiOpptjeningService);
-
-            appRunner = new ApplicationRunner(task, naisHttpServer);
-
-            appRunner.addShutdownListener(pensjonsgivendeInntektConsumer::shutdown);
-            appRunner.addShutdownListener(() -> {
-                try {
-                    dbConnection.close();
-                } catch (SQLException e) {
-                    LOG.error("Failed to close DB connection", e);
-                }
-            });
+            app.run();
         } catch (Exception e) {
             LOG.error("Application failed to start", e);
-            return;
         }
-        appRunner.run();
+    }
+
+    public void run() {
+        try {
+            while(true) {
+                List<PensjonsgivendeInntekt> pensjonsgivendeInntektListe = pensjonsgivendeInntektConsumer.poll();
+                pensjonsgivendeInntektConsumer.commit();
+            }
+        } catch (Exception e) {
+            LOG.error("Error during processing of PensjonsgivendeInntekt", e);
+        }
     }
 }
