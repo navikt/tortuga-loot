@@ -1,5 +1,7 @@
 package no.nav.opptjening.loot.client;
 
+import no.nav.opptjening.loot.sts.STSClientConfig;
+import no.nav.opptjening.loot.sts.SrvLootStsProperties;
 import no.nav.popp.tjenester.inntektskatt.v1.InntektSkattV1;
 
 import org.apache.cxf.ext.logging.LoggingFeature;
@@ -18,7 +20,7 @@ public class InntektSkattClientConfiguration {
         factory.setServiceClass(InntektSkattV1.class);
         factory.getFeatures().add(new LoggingFeature());
         InntektSkattV1 client = (InntektSkattV1) factory.create();
-        STSClientConfig.konfigurerKlientTilAaSendeStsUtstedtSaml(client, null);
+        STSClientConfig.konfigurerKlientTilAaSendeStsUtstedtSaml(client, new SrvLootStsProperties());
         return client;
     }
 }

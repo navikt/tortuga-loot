@@ -1,4 +1,4 @@
-package no.nav.opptjening.loot.client;
+package no.nav.opptjening.loot.sts;
 
 public interface STSProperties {
 

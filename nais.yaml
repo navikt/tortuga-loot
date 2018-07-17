@@ -24,3 +24,7 @@ fasitResources:
       propertyMap:
         username: STS_CLIENT_USERNAME
         password: STS_CLIENT_PASSWORD
+    - alias: securityTokenService
+        resourceType: baseurl
+        propertyMap:
+          url: STS_URL
