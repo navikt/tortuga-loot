@@ -2,6 +2,7 @@ package no.nav.opptjening.loot;
 
 import no.nav.opptjening.nais.NaisHttpServer;
 import no.nav.opptjening.schema.PensjonsgivendeInntekt;
+import no.nav.popp.tjenester.inntektskatt.v1.meldinger.LagreBeregnetSkattRequest;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,7 +43,7 @@ public class Application {
     public void run() {
         try {
             while(true) {
-                List<PensjonsgivendeInntekt> pensjonsgivendeInntektListe = pensjonsgivendeInntektConsumer.poll();
+                List<LagreBeregnetSkattRequest> lagreBeregnetSkattRequestList = pensjonsgivendeInntektConsumer.poll();
                 pensjonsgivendeInntektConsumer.commit();
             }
         } catch (Exception e) {

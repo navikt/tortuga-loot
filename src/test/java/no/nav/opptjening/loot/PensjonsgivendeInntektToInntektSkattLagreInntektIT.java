@@ -6,6 +6,8 @@ import no.nav.common.KafkaEnvironment;
 import no.nav.opptjening.schema.Fastlandsinntekt;
 import no.nav.opptjening.schema.PensjonsgivendeInntekt;
 import no.nav.opptjening.schema.Svalbardinntekt;
+import no.nav.opptjening.schema.skatt.hendelsesliste.Hendelse;
+import no.nav.popp.tjenester.inntektskatt.v1.meldinger.LagreBeregnetSkattRequest;
 import org.apache.kafka.clients.CommonClientConfigs;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.Producer;
@@ -17,9 +19,6 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.util.*;
-
-import static junit.framework.TestCase.assertTrue;
-import static org.junit.Assert.assertEquals;
 
 public class PensjonsgivendeInntektToInntektSkattLagreInntektIT {
 
@@ -40,27 +39,18 @@ public class PensjonsgivendeInntektToInntektSkattLagreInntektIT {
         env.put(KafkaConfiguration.Properties.SECURITY_PROTOCOL, "PLAINTEXT");
         env.put(KafkaConfiguration.Properties.SCHEMA_REGISTRY_URL, kafkaEnvironment.getServerPark().getSchemaregistry().getUrl());
         kafkaConfiguration = new KafkaConfiguration(env);
-        pensjonsgivendeInntektConsumer = new PensjonsgivendeInntektConsumer(kafkaConfiguration.getPensjonsgivendeInntektConsumer());
 
+        pensjonsgivendeInntektConsumer = new PensjonsgivendeInntektConsumer(kafkaConfiguration.getPensjonsgivendeInntektConsumer());
     }
 
     @After
     public void tearDown() { kafkaEnvironment.stop(); }
 
     @Test
-    public void consumeFromPensjonsgivendeInntektTopicAndCallInntektSkattLagreBeregnetSkatt() {
-        List<PensjonsgivendeInntekt> pensjonsgivendeInntektList = getPensjonsgivendeInntektList();
-        createTestRecords(pensjonsgivendeInntektList);
-        final Application app = new Application(pensjonsgivendeInntektConsumer);
-        //TODO: full component test
-    }
-
-    @Test
     public void consumeFromPensjonsgivendeInntektTopicOk() {
         List<PensjonsgivendeInntekt> initialPensjonsgivendeInntektList = getPensjonsgivendeInntektList();
         createTestRecords(initialPensjonsgivendeInntektList);
-        List<PensjonsgivendeInntekt> pensjonsgivendeInntektList = pensjonsgivendeInntektConsumer.poll();
-        //TODO: Control how many records are polled by specifying partition, and thus creating a better assert
+        List<LagreBeregnetSkattRequest> lagreBeregnetSkattRequestList = pensjonsgivendeInntektConsumer.poll();
     }
 
     private void createTestRecords(List<PensjonsgivendeInntekt> pensjonsgivendeInntektList) {
@@ -69,16 +59,18 @@ public class PensjonsgivendeInntektToInntektSkattLagreInntektIT {
         Producer<String, PensjonsgivendeInntekt> pensjonsgivendeInntektProducer = getPensjonsgivendeInntektProducer();
 
         List<ProducerRecord<String, PensjonsgivendeInntekt>> pensjonsgivendeInntektRecords = Arrays.asList(
-                new ProducerRecord<>(topic, "key1", pensjonsgivendeInntektList.get(0)),
-                new ProducerRecord<>(topic, "key2", pensjonsgivendeInntektList.get(1)),
-                new ProducerRecord<>(topic, "key3", pensjonsgivendeInntektList.get(2))
+                new ProducerRecord<>(topic, "2017-12345678901", pensjonsgivendeInntektList.get(0)),
+                new ProducerRecord<>(topic, "2017-12345678902", pensjonsgivendeInntektList.get(1)),
+                new ProducerRecord<>(topic, "2018-12345678903", pensjonsgivendeInntektList.get(2)),
+                new ProducerRecord<>(topic, "2017-12345678904", pensjonsgivendeInntektList.get(3)),
+                new ProducerRecord<>(topic, "2017-12345678905", pensjonsgivendeInntektList.get(4)),
+                new ProducerRecord<>(topic, "2017-12345678906", pensjonsgivendeInntektList.get(5))
         );
 
         for(ProducerRecord pensjonsgivendeInntektRecord: pensjonsgivendeInntektRecords) {
             pensjonsgivendeInntektProducer.send(pensjonsgivendeInntektRecord);
         }
         pensjonsgivendeInntektProducer.flush();
-        pensjonsgivendeInntektProducer.close();
     }
 
     private Producer<String, PensjonsgivendeInntekt> getPensjonsgivendeInntektProducer() {
@@ -110,7 +102,10 @@ public class PensjonsgivendeInntektToInntektSkattLagreInntektIT {
         return Arrays.asList(
                 new PensjonsgivendeInntekt("12345678901", "2017", fastlandsinntekt1, svalbardinntekt1),
                 new PensjonsgivendeInntekt("12345678902", "2017", fastlandsinntekt2, svalbardinntekt2),
-                new PensjonsgivendeInntekt("12345678903", "2018", fastlandsinntekt3, svalbardinntekt3)
+                new PensjonsgivendeInntekt("12345678903", "2018", fastlandsinntekt3, svalbardinntekt3),
+                null,
+                null,
+                null
         );
     }
 }

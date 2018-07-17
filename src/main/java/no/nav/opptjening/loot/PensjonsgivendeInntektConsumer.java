@@ -1,6 +1,8 @@
 package no.nav.opptjening.loot;
 
-import com.sun.istack.internal.NotNull;
+import no.nav.popp.tjenester.inntektskatt.v1.informasjon.InntektSkatt;
+import no.nav.popp.tjenester.inntektskatt.v1.meldinger.LagreBeregnetSkattRequest;
+import org.jetbrains.annotations.NotNull;
 import io.prometheus.client.Counter;
 import no.nav.opptjening.schema.PensjonsgivendeInntekt;
 import org.apache.kafka.clients.consumer.*;
@@ -51,16 +53,23 @@ public class PensjonsgivendeInntektConsumer {
         consumer.close();
     }
 
-    public List<PensjonsgivendeInntekt> poll() {
+    public List<LagreBeregnetSkattRequest> poll() {
 
-        ConsumerRecords<String, PensjonsgivendeInntekt> pensjonsgivendeInntekterRecords = consumer.poll(500);
-        List<PensjonsgivendeInntekt> pensjonsgivendeInntektListe = new ArrayList<>();
-        for (ConsumerRecord<String, PensjonsgivendeInntekt> record : pensjonsgivendeInntekterRecords) {
+        ConsumerRecords<String, PensjonsgivendeInntekt> pensjonsgivendeInntektRecords = consumer.poll(500);
+        System.out.println("Consumer polled: " + pensjonsgivendeInntektRecords.count());
+        List<LagreBeregnetSkattRequest> lagreBeregnetSkattRequestList = new ArrayList<>();
+
+        for (ConsumerRecord<String, PensjonsgivendeInntekt> record : pensjonsgivendeInntektRecords) {
             pensjonsgivendeInntekterReceivedCounter.inc();
-            pensjonsgivendeInntektListe.add(record.value());
+
+            InntektSkatt inntektSkatt = PensjonsgivendeInntektMapper.mapToInntektSkatt(record.value());
+            LagreBeregnetSkattRequest request = PensjonsgivendeInntektRecordMapper
+                    .mapToLagreBeregnetSkattRequest(record.key(), inntektSkatt);
+            lagreBeregnetSkattRequestList.add(request);
+
             pensjonsgivendeInntekterProcessedCounter.inc();
         }
-        return pensjonsgivendeInntektListe;
+        return lagreBeregnetSkattRequestList;
     }
 
     public void commit() {
