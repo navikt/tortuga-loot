@@ -19,9 +19,8 @@ fasitResources:
       propertyMap:
         username: KAFKA_USERNAME
         password: KAFKA_PASSWORD
-    - alias: poppDB
-        resourceType: datasource
-        propertyMap:
-          url: DB_URL
-          username: DB_USERNAME
-          password: DB_PASSWORD
+    - alias: srvtortuga-loot
+      resourceType: credential
+      propertyMap:
+        username: STS_CLIENT_USERNAME
+        password: STS_CLIENT_PASSWORD
