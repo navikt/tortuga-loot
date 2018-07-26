@@ -27,7 +27,7 @@ public class STSClientConfig {
     private static final String STS_CLIENT_AUTHENTICATION_POLICY = "classpath:untPolicy.xml";
     private static final String STS_SAML_POLICY = "classpath:samlPolicy.xml";
 
-    public static <T> T konfigurerKlientTilAaSendeStsUtstedtSaml(T port, STSProperties stsProperties) {
+    public <T> T konfigurerKlientTilAaSendeStsUtstedtSaml(T port, STSProperties stsProperties) {
         Client client = ClientProxy.getClient(port);
 
         STSClient stsClient = konfigurerStsClient(client.getBus(), stsProperties);

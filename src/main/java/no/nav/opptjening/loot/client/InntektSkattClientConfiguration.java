@@ -8,19 +8,34 @@ import org.apache.cxf.ext.logging.LoggingFeature;
 import org.apache.cxf.jaxws.JaxWsProxyFactoryBean;
 
 import java.util.Map;
+import java.util.function.Supplier;
 
 public class InntektSkattClientConfiguration {
-    
-    private static final InntektSkattV1 client = makeClient();
 
-    private static InntektSkattV1 makeClient() {
-        Map<String, String> env = System.getenv();
-        JaxWsProxyFactoryBean factory = new JaxWsProxyFactoryBean();
-        factory.setAddress(env.getOrDefault("INNTEKT_SKATT_ENDPOINT_URL", "localhost:8080/"));
+    private final static String INNTEKT_SKATT_URL_ENV_NAME = "INNTEKT_SKATT_URL";
+    private Map<String, String> env;
+    private Supplier<JaxWsProxyFactoryBean> factorySupplier;
+    private SrvLootStsProperties srvLootStsProperties;
+    private STSClientConfig stsClientConfig;
+
+    public InntektSkattClientConfiguration(Supplier<JaxWsProxyFactoryBean> factorySupplier, Map<String, String> env,
+                                           SrvLootStsProperties srvLootStsProperties, STSClientConfig stsClientConfig) {
+        this.factorySupplier = factorySupplier;
+        this.env = env;
+        this.srvLootStsProperties = srvLootStsProperties;
+        this.stsClientConfig = stsClientConfig;
+    }
+
+    public InntektSkattV1 configureAndGetClient() {
+        JaxWsProxyFactoryBean factory = factorySupplier.get();
+
+        factory.setAddress(env.get(INNTEKT_SKATT_URL_ENV_NAME));
         factory.setServiceClass(InntektSkattV1.class);
         factory.getFeatures().add(new LoggingFeature());
         InntektSkattV1 client = (InntektSkattV1) factory.create();
-        STSClientConfig.konfigurerKlientTilAaSendeStsUtstedtSaml(client, new SrvLootStsProperties());
+
+        stsClientConfig.konfigurerKlientTilAaSendeStsUtstedtSaml(client, srvLootStsProperties);
+
         return client;
     }
 }
