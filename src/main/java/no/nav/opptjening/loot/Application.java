@@ -1,21 +1,40 @@
 package no.nav.opptjening.loot;
 
+import io.prometheus.client.Counter;
+import no.nav.opptjening.loot.client.InntektSkattClient;
+import no.nav.opptjening.loot.client.InntektSkattClientConfiguration;
+import no.nav.opptjening.loot.sts.STSClientConfig;
+import no.nav.opptjening.loot.sts.SrvLootStsProperties;
 import no.nav.opptjening.nais.NaisHttpServer;
 import no.nav.opptjening.schema.PensjonsgivendeInntekt;
+import no.nav.popp.tjenester.inntektskatt.v1.LagreBeregnetSkattSikkerhetsbegrensning;
+import no.nav.popp.tjenester.inntektskatt.v1.LagreBeregnetSkattUgyldigInput;
+import no.nav.popp.tjenester.inntektskatt.v1.informasjon.InntektSkatt;
 import no.nav.popp.tjenester.inntektskatt.v1.meldinger.LagreBeregnetSkattRequest;
-import org.apache.kafka.clients.consumer.KafkaConsumer;
+import org.apache.cxf.jaxws.JaxWsProxyFactoryBean;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 public class Application {
 
     private static final Logger LOG = LoggerFactory.getLogger(Application.class);
     private final PensjonsgivendeInntektConsumer pensjonsgivendeInntektConsumer;
+    private final InntektSkattClient inntektSkattClient;
 
-    public Application(PensjonsgivendeInntektConsumer pensjonsgivendeInntektConsumer) {
+    private static final Counter pensjonsgivendeInntekterProcessedCounter = Counter.build()
+            .name("pensjonsgivende_inntekter_processed")
+            .help("Antall pensjonsgivende inntekter prosessert").register();
+
+    public Application(PensjonsgivendeInntektConsumer pensjonsgivendeInntektConsumer,
+                       InntektSkattClient inntektSkattClient) {
         this.pensjonsgivendeInntektConsumer = pensjonsgivendeInntektConsumer;
+        this.inntektSkattClient = inntektSkattClient;
     }
 
     public static void main(String[] args) {
@@ -23,15 +42,24 @@ public class Application {
         final Application app;
 
         try {
+
+            Map<String, String> env = System.getenv();
+
             NaisHttpServer naisHttpServer = new NaisHttpServer();
             naisHttpServer.run();
 
-            KafkaConfiguration kafkaConfiguration = new KafkaConfiguration(System.getenv());
+            KafkaConfiguration kafkaConfiguration = new KafkaConfiguration(env);
             PensjonsgivendeInntektConsumer pensjonsgivendeInntektConsumer =
                     new PensjonsgivendeInntektConsumer(kafkaConfiguration.getPensjonsgivendeInntektConsumer());
 
-            app = new Application(pensjonsgivendeInntektConsumer);
+            SrvLootStsProperties srvLootStsProperties = new SrvLootStsProperties();
+            STSClientConfig stsClientConfig = new STSClientConfig();
+            InntektSkattClientConfiguration inntektSkattClientConfiguration =
+                    new InntektSkattClientConfiguration(JaxWsProxyFactoryBean::new, env, srvLootStsProperties, stsClientConfig);
+            InntektSkattClient inntektSkattClient = new InntektSkattClient(inntektSkattClientConfiguration.configureAndGetClient());
 
+
+            app = new Application(pensjonsgivendeInntektConsumer, inntektSkattClient);
             Runtime.getRuntime().addShutdownHook(new Thread(pensjonsgivendeInntektConsumer::close));
 
             app.run();
@@ -43,11 +71,38 @@ public class Application {
     public void run() {
         try {
             while(true) {
-                List<LagreBeregnetSkattRequest> lagreBeregnetSkattRequestList = pensjonsgivendeInntektConsumer.poll();
+
+                ConsumerRecords<String, PensjonsgivendeInntekt> pensjonsgivendeInntektRecords = pensjonsgivendeInntektConsumer.poll();
                 pensjonsgivendeInntektConsumer.commit();
+
+                for(LagreBeregnetSkattRequest lagreBeregnetSkattRequest: recordsToRequestList(pensjonsgivendeInntektRecords)) {
+                    try {
+                        inntektSkattClient.lagreBeregnetSkatt(lagreBeregnetSkattRequest);
+                    } catch (LagreBeregnetSkattUgyldigInput e) {
+                        LOG.error("Ugyldig input til InntektSkatt.lagreBeregnetSkatt", e);
+                    } catch (LagreBeregnetSkattSikkerhetsbegrensning e) {
+                        LOG.error("Sikkerhetsbegrensning", e);
+                    } catch (RuntimeException e) {
+                        LOG.error("Unknown error", e);
+                    }
+                }
             }
-        } catch (Exception e) {
+        } catch (RuntimeException e) {
             LOG.error("Error during processing of PensjonsgivendeInntekt", e);
         }
+    }
+
+    private List<LagreBeregnetSkattRequest> recordsToRequestList(ConsumerRecords<String, PensjonsgivendeInntekt> pensjonsgivendeInntektRecords) {
+
+        List<LagreBeregnetSkattRequest> lagreBeregnetSkattRequestList = new ArrayList<>();
+
+        for (ConsumerRecord<String, PensjonsgivendeInntekt> record : pensjonsgivendeInntektRecords) {
+            InntektSkatt inntektSkatt = PensjonsgivendeInntektMapper.mapToInntektSkatt(record.value());
+            LagreBeregnetSkattRequest request = PensjonsgivendeInntektRecordMapper
+                    .mapToLagreBeregnetSkattRequest(record.key(), inntektSkatt);
+            lagreBeregnetSkattRequestList.add(request);
+            pensjonsgivendeInntekterProcessedCounter.inc();
+        }
+        return lagreBeregnetSkattRequestList;
     }
 }

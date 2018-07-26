@@ -10,11 +10,11 @@ public class PensjonsgivendeInntektRecordMapper {
 
     public static LagreBeregnetSkattRequest mapToLagreBeregnetSkattRequest(String key, InntektSkatt inntektSkatt) {
 
-        String[] keyParts = key.split("-");
+        String[] inntektsAarAndPersonIdentifikator = key.split("-");
         LagreBeregnetSkattRequest lagreBeregnetSkattRequest = new LagreBeregnetSkattRequest();
 
-        lagreBeregnetSkattRequest.setPersonIdent(keyParts[PERSONIDENTIFIKATOR]);
-        lagreBeregnetSkattRequest.setInntektsaar(keyParts[INNTEKTSAAR]);
+        lagreBeregnetSkattRequest.setPersonIdent(inntektsAarAndPersonIdentifikator[PERSONIDENTIFIKATOR]);
+        lagreBeregnetSkattRequest.setInntektsaar(inntektsAarAndPersonIdentifikator[INNTEKTSAAR]);
         lagreBeregnetSkattRequest.setInntektSkatt(inntektSkatt);
 
         return lagreBeregnetSkattRequest;

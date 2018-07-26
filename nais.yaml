@@ -28,3 +28,7 @@ fasitResources:
         resourceType: baseurl
         propertyMap:
           url: STS_URL
+    - alias: "popp:Inntektskatt_v1"
+        resourceType: soapservice
+        propertyMap:
+          url: INNTEKT_SKATT_URL

@@ -1,7 +1,5 @@
 package no.nav.opptjening.loot;
 
-import no.nav.popp.tjenester.inntektskatt.v1.informasjon.InntektSkatt;
-import no.nav.popp.tjenester.inntektskatt.v1.meldinger.LagreBeregnetSkattRequest;
 import org.jetbrains.annotations.NotNull;
 import io.prometheus.client.Counter;
 import no.nav.opptjening.schema.PensjonsgivendeInntekt;
@@ -10,10 +8,8 @@ import org.apache.kafka.common.TopicPartition;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.List;
 
 public class PensjonsgivendeInntektConsumer {
 
@@ -22,10 +18,6 @@ public class PensjonsgivendeInntektConsumer {
     private static final Counter pensjonsgivendeInntekterReceivedCounter = Counter.build()
             .name("pensjonsgivende_inntekter_received")
             .help("Antall pensjonsgivende inntekter hentet.").register();
-
-    private static final Counter pensjonsgivendeInntekterProcessedCounter = Counter.build()
-            .name("pensjonsgivende_inntekter_processed")
-            .help("Antall pensjonsgivende inntekter prosessert").register();
 
     private final Consumer<String, PensjonsgivendeInntekt> consumer;
 
@@ -53,23 +45,10 @@ public class PensjonsgivendeInntektConsumer {
         consumer.close();
     }
 
-    public List<LagreBeregnetSkattRequest> poll() {
-
+    public ConsumerRecords<String, PensjonsgivendeInntekt> poll() {
         ConsumerRecords<String, PensjonsgivendeInntekt> pensjonsgivendeInntektRecords = consumer.poll(500);
-        System.out.println("Consumer polled: " + pensjonsgivendeInntektRecords.count());
-        List<LagreBeregnetSkattRequest> lagreBeregnetSkattRequestList = new ArrayList<>();
-
-        for (ConsumerRecord<String, PensjonsgivendeInntekt> record : pensjonsgivendeInntektRecords) {
-            pensjonsgivendeInntekterReceivedCounter.inc();
-
-            InntektSkatt inntektSkatt = PensjonsgivendeInntektMapper.mapToInntektSkatt(record.value());
-            LagreBeregnetSkattRequest request = PensjonsgivendeInntektRecordMapper
-                    .mapToLagreBeregnetSkattRequest(record.key(), inntektSkatt);
-            lagreBeregnetSkattRequestList.add(request);
-
-            pensjonsgivendeInntekterProcessedCounter.inc();
-        }
-        return lagreBeregnetSkattRequestList;
+        pensjonsgivendeInntekterReceivedCounter.inc(pensjonsgivendeInntektRecords.count()); //TODO: Correct count?
+        return pensjonsgivendeInntektRecords;
     }
 
     public void commit() {
