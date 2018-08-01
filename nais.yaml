@@ -25,10 +25,10 @@ fasitResources:
         username: STS_CLIENT_USERNAME
         password: STS_CLIENT_PASSWORD
     - alias: securityTokenService
-        resourceType: baseurl
-        propertyMap:
-          url: STS_URL
+      resourceType: baseurl
+      propertyMap:
+        url: STS_URL
     - alias: "popp:Inntektskatt_v1"
-        resourceType: soapservice
-        propertyMap:
-          url: INNTEKT_SKATT_URL
+      resourceType: soapservice
+      propertyMap:
+        url: INNTEKT_SKATT_URL
