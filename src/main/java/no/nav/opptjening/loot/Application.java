@@ -46,7 +46,7 @@ public class Application {
             Map<String, String> env = System.getenv();
 
             NaisHttpServer naisHttpServer = new NaisHttpServer();
-            naisHttpServer.run();
+            naisHttpServer.start();
 
             KafkaConfiguration kafkaConfiguration = new KafkaConfiguration(env);
             PensjonsgivendeInntektConsumer pensjonsgivendeInntektConsumer =
@@ -72,7 +72,7 @@ public class Application {
         try {
             while(true) {
 
-                ConsumerRecords<String, PensjonsgivendeInntekt> pensjonsgivendeInntektRecords = pensjonsgivendeInntektConsumer.poll();
+                ConsumerRecords<String, PensjonsgivendeInntekt> pensjonsgivendeInntektRecords = pensjonsgivendeInntektConsumer.poll(500);
                 pensjonsgivendeInntektConsumer.commit();
 
                 for(LagreBeregnetSkattRequest lagreBeregnetSkattRequest: recordsToRequestList(pensjonsgivendeInntektRecords)) {

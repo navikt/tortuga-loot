@@ -45,8 +45,8 @@ public class PensjonsgivendeInntektConsumer {
         consumer.close();
     }
 
-    public ConsumerRecords<String, PensjonsgivendeInntekt> poll() {
-        ConsumerRecords<String, PensjonsgivendeInntekt> pensjonsgivendeInntektRecords = consumer.poll(500);
+    public ConsumerRecords<String, PensjonsgivendeInntekt> poll(long timeout) {
+        ConsumerRecords<String, PensjonsgivendeInntekt> pensjonsgivendeInntektRecords = consumer.poll(timeout);
         pensjonsgivendeInntekterReceivedCounter.inc(pensjonsgivendeInntektRecords.count()); //TODO: Correct count?
         return pensjonsgivendeInntektRecords;
     }

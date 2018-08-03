@@ -1,5 +1,6 @@
 package no.nav.opptjening.loot;
 
+
 import no.nav.popp.tjenester.inntektskatt.v1.informasjon.InntektSkatt;
 import no.nav.popp.tjenester.inntektskatt.v1.meldinger.LagreBeregnetSkattRequest;
 
