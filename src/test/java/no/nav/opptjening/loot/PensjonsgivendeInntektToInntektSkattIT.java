@@ -5,8 +5,10 @@ import no.nav.common.KafkaEnvironment;
 import no.nav.opptjening.schema.Fastlandsinntekt;
 import no.nav.opptjening.schema.PensjonsgivendeInntekt;
 import no.nav.opptjening.schema.Svalbardinntekt;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.producer.*;
+import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.junit.After;
 import org.junit.Before;
@@ -19,8 +21,9 @@ import static org.junit.Assert.assertEquals;
 public class PensjonsgivendeInntektToInntektSkattIT {
 
     private KafkaEnvironment kafkaEnvironment;
-    private List<String> topics = Collections.singletonList(KafkaConfiguration.PENSJONSGIVENDE_INNTEKT_TOPIC);
+    private final List<String> topics = Collections.singletonList(KafkaConfiguration.PENSJONSGIVENDE_INNTEKT_TOPIC);
     private PensjonsgivendeInntektConsumer pensjonsgivendeInntektConsumer;
+    private final TopicPartition topicPartition = new TopicPartition(KafkaConfiguration.PENSJONSGIVENDE_INNTEKT_TOPIC, 0);
 
     @Before
     public void setUp() {
@@ -33,6 +36,9 @@ public class PensjonsgivendeInntektToInntektSkattIT {
         env.put(KafkaConfiguration.Properties.SECURITY_PROTOCOL, "PLAINTEXT");
 
         KafkaConfiguration kafkaConfiguration = new KafkaConfiguration(env);
+
+        sendTestRecordsToTopic();
+
         pensjonsgivendeInntektConsumer = new PensjonsgivendeInntektConsumer(kafkaConfiguration.getPensjonsgivendeInntektConsumer());
     }
 
@@ -43,22 +49,27 @@ public class PensjonsgivendeInntektToInntektSkattIT {
 
     @Test
     public void consumeFromPensjonsgivendeInntektTopicOk() {
+        // Om testen feiler kan timeout være for lav
+        ConsumerRecords<String, PensjonsgivendeInntekt> pensjonsgivendeInntektRecords = pensjonsgivendeInntektConsumer.poll(10000);
+        assertEquals( 6, pensjonsgivendeInntektRecords.count());
+
+        List<ConsumerRecord<String, PensjonsgivendeInntekt>> consumerRecordList = pensjonsgivendeInntektRecords.records(topicPartition);
+        assertEquals("2017-12345678906", consumerRecordList.get(5).key());
+    }
+
+    private void sendTestRecordsToTopic() {
         Producer<String, PensjonsgivendeInntekt> producer = createDummyProducer();
         List<PensjonsgivendeInntekt> pensjonsgivendeInntektList = getPensjonsgivendeInntektList();
         String topic = KafkaConfiguration.PENSJONSGIVENDE_INNTEKT_TOPIC;
-        
+
         producer.send(new ProducerRecord<>(topic,"2017-10097045457", pensjonsgivendeInntektList.get(0)));
         producer.send(new ProducerRecord<>(topic,"2018-10098045457", pensjonsgivendeInntektList.get(1)));
         producer.send(new ProducerRecord<>(topic,"2017-10099045457", pensjonsgivendeInntektList.get(2)));
         producer.send(new ProducerRecord<>(topic,"2018-12345678904", pensjonsgivendeInntektList.get(3)));
         producer.send(new ProducerRecord<>(topic,"2017-12345678905", pensjonsgivendeInntektList.get(4)));
         producer.send(new ProducerRecord<>(topic,"2017-12345678906", pensjonsgivendeInntektList.get(5)));
-
         producer.flush();
-        
-        // Om testen feiler kan timeout være for lav
-        ConsumerRecords<String, PensjonsgivendeInntekt> records = pensjonsgivendeInntektConsumer.poll(10000);  
-        assertEquals( 6, records.count());
+
     }
     
     private List<PensjonsgivendeInntekt> getPensjonsgivendeInntektList() {
