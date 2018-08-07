@@ -1,6 +1,5 @@
 package no.nav.opptjening.loot;
 
-import io.prometheus.client.Counter;
 import no.nav.opptjening.loot.client.InntektSkattClient;
 import no.nav.opptjening.loot.client.InntektSkattClientConfiguration;
 import no.nav.opptjening.loot.sts.STSClientConfig;
@@ -9,27 +8,21 @@ import no.nav.opptjening.nais.NaisHttpServer;
 import no.nav.opptjening.schema.PensjonsgivendeInntekt;
 import no.nav.popp.tjenester.inntektskatt.v1.LagreBeregnetSkattSikkerhetsbegrensning;
 import no.nav.popp.tjenester.inntektskatt.v1.LagreBeregnetSkattUgyldigInput;
-import no.nav.popp.tjenester.inntektskatt.v1.informasjon.InntektSkatt;
 import no.nav.popp.tjenester.inntektskatt.v1.meldinger.LagreBeregnetSkattRequest;
 import org.apache.cxf.jaxws.JaxWsProxyFactoryBean;
-import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
+
+import static no.nav.opptjening.loot.LagreBeregnetSkattRequestMapper.recordsToRequestList;
 
 public class Application {
 
     private static final Logger LOG = LoggerFactory.getLogger(Application.class);
     private final PensjonsgivendeInntektConsumer pensjonsgivendeInntektConsumer;
     private final InntektSkattClient inntektSkattClient;
-
-    private static final Counter pensjonsgivendeInntekterProcessedCounter = Counter.build()
-            .name("pensjonsgivende_inntekter_processed")
-            .help("Antall pensjonsgivende inntekter prosessert").register();
 
     public Application(PensjonsgivendeInntektConsumer pensjonsgivendeInntektConsumer,
                        InntektSkattClient inntektSkattClient) {
@@ -90,19 +83,5 @@ public class Application {
         } catch (RuntimeException e) {
             LOG.error("Error during processing of PensjonsgivendeInntekt", e);
         }
-    }
-
-    private List<LagreBeregnetSkattRequest> recordsToRequestList(ConsumerRecords<String, PensjonsgivendeInntekt> pensjonsgivendeInntektRecords) {
-
-        List<LagreBeregnetSkattRequest> lagreBeregnetSkattRequestList = new ArrayList<>();
-
-        for (ConsumerRecord<String, PensjonsgivendeInntekt> record : pensjonsgivendeInntektRecords) {
-            InntektSkatt inntektSkatt = PensjonsgivendeInntektMapper.mapToInntektSkatt(record.value());
-            LagreBeregnetSkattRequest request = PensjonsgivendeInntektRecordMapper
-                    .mapToLagreBeregnetSkattRequest(record.key(), inntektSkatt);
-            lagreBeregnetSkattRequestList.add(request);
-            pensjonsgivendeInntekterProcessedCounter.inc();
-        }
-        return lagreBeregnetSkattRequestList;
     }
 }
