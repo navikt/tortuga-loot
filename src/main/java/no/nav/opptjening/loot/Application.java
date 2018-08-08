@@ -64,9 +64,7 @@ public class Application {
     public void run() {
         try {
             while(true) {
-
                 ConsumerRecords<String, PensjonsgivendeInntekt> pensjonsgivendeInntektRecords = pensjonsgivendeInntektConsumer.poll(500);
-                pensjonsgivendeInntektConsumer.commit();
 
                 for(LagreBeregnetSkattRequest lagreBeregnetSkattRequest: recordsToRequestList(pensjonsgivendeInntektRecords)) {
                     try {
@@ -79,6 +77,7 @@ public class Application {
                         LOG.error("Unknown error", e);
                     }
                 }
+                pensjonsgivendeInntektConsumer.commit();
             }
         } catch (RuntimeException e) {
             LOG.error("Error during processing of PensjonsgivendeInntekt", e);
