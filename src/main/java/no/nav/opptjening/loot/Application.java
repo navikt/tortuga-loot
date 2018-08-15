@@ -63,22 +63,20 @@ public class Application {
 
     public void run() {
         try {
-            while(true) {
+            while (true) {
                 ConsumerRecords<String, PensjonsgivendeInntekt> pensjonsgivendeInntektRecords = pensjonsgivendeInntektConsumer.poll(500);
 
-                for(LagreBeregnetSkattRequest lagreBeregnetSkattRequest: recordsToRequestList(pensjonsgivendeInntektRecords)) {
+                for (LagreBeregnetSkattRequest lagreBeregnetSkattRequest : recordsToRequestList(pensjonsgivendeInntektRecords)) {
                     try {
                         inntektSkattClient.lagreBeregnetSkatt(lagreBeregnetSkattRequest);
                     } catch (LagreBeregnetSkattUgyldigInput e) {
-                        LOG.error("Ugyldig input til InntektSkatt.lagreBeregnetSkatt", e);
-                    } catch (LagreBeregnetSkattSikkerhetsbegrensning e) {
-                        LOG.error("Sikkerhetsbegrensning", e);
-                    } catch (RuntimeException e) {
-                        LOG.error("Unknown error", e);
+                        LOG.warn("Ugyldig input til InntektSkatt.lagreBeregnetSkatt", e);
                     }
                 }
                 pensjonsgivendeInntektConsumer.commit();
             }
+        } catch (LagreBeregnetSkattSikkerhetsbegrensning e) {
+            LOG.error("Sikkerhetsbegrensning", e);
         } catch (RuntimeException e) {
             LOG.error("Error during processing of PensjonsgivendeInntekt", e);
         }
