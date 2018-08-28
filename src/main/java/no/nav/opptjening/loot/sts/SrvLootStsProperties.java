@@ -10,7 +10,7 @@ public class SrvLootStsProperties implements STSProperties {
 
     static {
         username = getStsPropertiesByEnvName("STS_CLIENT_USERNAME");
-        password = getStsPropertiesByEnvName("STS_CLIENT_USERNAME");
+        password = getStsPropertiesByEnvName("STS_CLIENT_PASSWORD");
         stsUrl = getStsPropertiesByEnvName("STS_URL");
     }
 
