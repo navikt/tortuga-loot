@@ -6,8 +6,10 @@ import no.nav.popp.tjenester.inntektskatt.v1.InntektSkattV1;
 
 import org.apache.cxf.ext.logging.LoggingFeature;
 import org.apache.cxf.jaxws.JaxWsProxyFactoryBean;
+import org.apache.cxf.transport.http.URLConnectionHTTPConduit;
 
 import java.util.Map;
+import java.util.Optional;
 import java.util.function.Supplier;
 
 public class InntektSkattClientConfiguration {
@@ -29,7 +31,10 @@ public class InntektSkattClientConfiguration {
     public InntektSkattV1 configureAndGetClient() {
         JaxWsProxyFactoryBean factory = factorySupplier.get();
 
-        factory.setAddress(env.get(INNTEKT_SKATT_URL_ENV_NAME));
+        String inntektSkattUrl = Optional.ofNullable(env.get(INNTEKT_SKATT_URL_ENV_NAME))
+                .orElseThrow(() -> new MissingClientConfig("Missing client property " + INNTEKT_SKATT_URL_ENV_NAME + "."));
+
+        factory.setAddress(inntektSkattUrl);
         factory.setServiceClass(InntektSkattV1.class);
         factory.getFeatures().add(new LoggingFeature());
         InntektSkattV1 client = (InntektSkattV1) factory.create();
