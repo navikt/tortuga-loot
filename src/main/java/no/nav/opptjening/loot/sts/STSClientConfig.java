@@ -27,20 +27,20 @@ public class STSClientConfig {
     private static final String STS_CLIENT_AUTHENTICATION_POLICY = "classpath:untPolicy.xml";
     private static final String STS_SAML_POLICY = "classpath:samlPolicy.xml";
 
-    public <T> T konfigurerKlientTilAaSendeStsUtstedtSaml(T port, STSProperties stsProperties) {
+    public <T> T configureClientToSendStsIssuedSaml(T port, STSProperties stsProperties) {
         Client client = ClientProxy.getClient(port);
 
-        STSClient stsClient = konfigurerStsClient(client.getBus(), stsProperties);
+        STSClient stsClient = configureStsClient(client.getBus(), stsProperties);
 
         client.getRequestContext().put(SecurityConstants.STS_CLIENT, stsClient);
         client.getRequestContext().put(SecurityConstants.CACHE_ISSUED_TOKEN_IN_ENDPOINT, true);
 
-        konigurerEndpointPolicyReference(client, STS_SAML_POLICY);
+        configureEndpointPolicyReference(client, STS_SAML_POLICY);
 
         return port;
     }
 
-    private static void konigurerEndpointPolicyReference(Client client, String stsSamlPolicy) {
+    private static void configureEndpointPolicyReference(Client client, String stsSamlPolicy) {
         Bus bus = client.getBus();
 
         PolicyBuilder policyBuilder = bus.getExtension(PolicyBuilder.class);
@@ -56,7 +56,7 @@ public class STSClientConfig {
 
     }
 
-    private static STSClient konfigurerStsClient(Bus bus, STSProperties stsProperties) {
+    private static STSClient configureStsClient(Bus bus, STSProperties stsProperties) {
         STSClient stsClient = new STSClient(bus){
             @Override
             protected boolean useSecondaryParameters() {

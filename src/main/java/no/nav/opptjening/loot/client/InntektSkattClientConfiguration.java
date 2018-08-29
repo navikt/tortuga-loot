@@ -39,7 +39,7 @@ public class InntektSkattClientConfiguration {
         factory.getFeatures().add(new LoggingFeature());
         InntektSkattV1 client = (InntektSkattV1) factory.create();
 
-        stsClientConfig.konfigurerKlientTilAaSendeStsUtstedtSaml(client, srvLootStsProperties);
+        stsClientConfig.configureClientToSendStsIssuedSaml(client, srvLootStsProperties);
 
         return client;
     }
