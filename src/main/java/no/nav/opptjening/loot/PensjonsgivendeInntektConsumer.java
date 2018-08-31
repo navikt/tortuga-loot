@@ -1,7 +1,6 @@
 package no.nav.opptjening.loot;
 
 import org.jetbrains.annotations.NotNull;
-import io.prometheus.client.Counter;
 import no.nav.opptjening.schema.PensjonsgivendeInntekt;
 import org.apache.kafka.clients.consumer.*;
 import org.apache.kafka.common.TopicPartition;
@@ -14,10 +13,6 @@ import java.util.Collections;
 public class PensjonsgivendeInntektConsumer {
 
     private static final Logger LOG = LoggerFactory.getLogger(PensjonsgivendeInntektConsumer.class);
-
-    private static final Counter pensjonsgivendeInntekterReceivedCounter = Counter.build()
-            .name("pensjonsgivende_inntekter_received")
-            .help("Antall pensjonsgivende inntekter hentet.").register();
 
     private final Consumer<String, PensjonsgivendeInntekt> consumer;
 
@@ -46,9 +41,7 @@ public class PensjonsgivendeInntektConsumer {
     }
 
     public ConsumerRecords<String, PensjonsgivendeInntekt> poll(long timeout) {
-        ConsumerRecords<String, PensjonsgivendeInntekt> pensjonsgivendeInntektRecords = consumer.poll(timeout);
-        pensjonsgivendeInntekterReceivedCounter.inc(pensjonsgivendeInntektRecords.count()); //TODO: Correct count?
-        return pensjonsgivendeInntektRecords;
+        return consumer.poll(timeout);
     }
 
     public void commit() {
