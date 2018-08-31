@@ -15,7 +15,11 @@ import static no.nav.opptjening.loot.PensjonsgivendeInntektRecordMapper.mapToLag
 
 public class LagreBeregnetSkattRequestMapper {
 
-    private static final Counter pensjonsgivendeInntekterProcessedCounter = Counter.build()
+    private static final Counter pensjonsgivendeInntekterRecieved = Counter.build()
+            .name("pensjonsgivende_inntekter_recieved")
+            .help("Antall pensjonsgivende inntekter mottatt").register();
+
+    private static final Counter pensjonsgivendeInntekterProcessed = Counter.build()
             .name("pensjonsgivende_inntekter_processed")
             .help("Antall pensjonsgivende inntekter prosessert").register();
 
@@ -23,12 +27,14 @@ public class LagreBeregnetSkattRequestMapper {
 
         List<LagreBeregnetSkattRequest> lagreBeregnetSkattRequestList = new ArrayList<>();
 
-        for (ConsumerRecord<String, PensjonsgivendeInntekt> record : pensjonsgivendeInntektRecords) {
+        for(ConsumerRecord<String, PensjonsgivendeInntekt> record : pensjonsgivendeInntektRecords) {
+            pensjonsgivendeInntekterRecieved.inc();
             InntektSkatt inntektSkatt = mapToInntektSkatt(record.value());
             LagreBeregnetSkattRequest request = mapToLagreBeregnetSkattRequest(record.key(), inntektSkatt);
             lagreBeregnetSkattRequestList.add(request);
-            pensjonsgivendeInntekterProcessedCounter.inc();
         }
+
+        pensjonsgivendeInntekterProcessed.inc(lagreBeregnetSkattRequestList.size());
         return lagreBeregnetSkattRequestList;
     }
 }
