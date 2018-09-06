@@ -5,6 +5,7 @@ import org.jetbrains.annotations.NotNull;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Map;
+import java.util.Optional;
 
 public class InntektSkattProperties {
 
@@ -19,7 +20,7 @@ public class InntektSkattProperties {
     public static InntektSkattProperties createFromEnvironment(@NotNull Map<String, String> env)
             throws URISyntaxException {
         return new InntektSkattProperties(
-                new URI(env.computeIfAbsent("INNTEKT_SKATT_URL", s -> {
+                new URI(Optional.of(env.get("INNTEKT_SKATT_URL")).orElseThrow(() -> {
                     throw new MissingClientConfig("Missing required property INNTEKT_SKATT_URL");
                 }))
         );

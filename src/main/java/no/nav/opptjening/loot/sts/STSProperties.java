@@ -5,6 +5,7 @@ import org.jetbrains.annotations.NotNull;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Map;
+import java.util.Optional;
 
 public class STSProperties {
 
@@ -27,13 +28,13 @@ public class STSProperties {
     public static STSProperties createFromEnvironment(@NotNull Map<String, String> env)
             throws URISyntaxException {
         return new STSProperties(
-                new URI(env.computeIfAbsent("STS_URL", s -> {
+                new URI(Optional.of(env.get("STS_URL")).orElseThrow(() -> {
                     throw new MissingStsConfig("Missing required property STS_URL");
                 })),
-                env.computeIfAbsent("STS_CLIENT_USERNAME", s -> {
+                Optional.of(env.get("STS_CLIENT_USERNAME")).orElseThrow(() -> {
                     throw new MissingStsConfig("Missing required property STS_CLIENT_USERNAME");
                 }),
-                env.computeIfAbsent("STS_CLIENT_PASSWORD", s -> {
+                Optional.of(env.get("STS_CLIENT_PASSWORD")).orElseThrow(() -> {
                     throw new MissingStsConfig("Missing required property STS_CLIENT_PASSWORD");
                 })
         );
