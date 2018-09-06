@@ -28,15 +28,9 @@ public class STSProperties {
     public static STSProperties createFromEnvironment(@NotNull Map<String, String> env)
             throws URISyntaxException {
         return new STSProperties(
-                new URI(Optional.of(env.get("STS_URL")).orElseThrow(() -> {
-                    throw new MissingStsConfig("Missing required property STS_URL");
-                })),
-                Optional.of(env.get("STS_CLIENT_USERNAME")).orElseThrow(() -> {
-                    throw new MissingStsConfig("Missing required property STS_CLIENT_USERNAME");
-                }),
-                Optional.of(env.get("STS_CLIENT_PASSWORD")).orElseThrow(() -> {
-                    throw new MissingStsConfig("Missing required property STS_CLIENT_PASSWORD");
-                })
+                new URI(Optional.ofNullable(env.get("STS_URL")).orElseThrow(() -> new MissingStsConfig("Missing required property STS_URL"))),
+                Optional.ofNullable(env.get("STS_CLIENT_USERNAME")).orElseThrow(() -> new MissingStsConfig("Missing required property STS_CLIENT_USERNAME")),
+                Optional.ofNullable(env.get("STS_CLIENT_PASSWORD")).orElseThrow(() -> new MissingStsConfig("Missing required property STS_CLIENT_PASSWORD"))
         );
     }
 

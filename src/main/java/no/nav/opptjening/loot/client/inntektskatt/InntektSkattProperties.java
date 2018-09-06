@@ -18,11 +18,9 @@ public class InntektSkattProperties {
 
     @NotNull
     public static InntektSkattProperties createFromEnvironment(@NotNull Map<String, String> env)
-            throws URISyntaxException {
+            throws URISyntaxException, MissingClientConfig {
         return new InntektSkattProperties(
-                new URI(Optional.of(env.get("INNTEKT_SKATT_URL")).orElseThrow(() -> {
-                    throw new MissingClientConfig("Missing required property INNTEKT_SKATT_URL");
-                }))
+                new URI(Optional.ofNullable(env.get("INNTEKT_SKATT_URL")).orElseThrow(() -> new MissingClientConfig("Missing required property INNTEKT_SKATT_URL")))
         );
     }
 
