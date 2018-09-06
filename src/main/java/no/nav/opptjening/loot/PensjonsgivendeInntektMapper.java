@@ -6,8 +6,9 @@ import no.nav.popp.tjenester.inntektskatt.v1.informasjon.InntektSkatt;
 public class PensjonsgivendeInntektMapper {
 
     public InntektSkatt mapToInntektSkatt(PensjonsgivendeInntekt pensjonsgivendeInntekt) {
-
-        if(pensjonsgivendeInntekt == null) return null;
+        if (pensjonsgivendeInntekt == null) {
+            return null;
+        }
 
         InntektSkatt inntektSkatt = new InntektSkatt();
 

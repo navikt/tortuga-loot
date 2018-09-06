@@ -12,14 +12,13 @@ import no.nav.opptjening.loot.client.inntektskatt.InntektSkattClient;
 import no.nav.opptjening.schema.Fastlandsinntekt;
 import no.nav.opptjening.schema.PensjonsgivendeInntekt;
 import no.nav.opptjening.schema.Svalbardinntekt;
+import no.nav.opptjening.schema.skatt.hendelsesliste.HendelseKey;
 import org.apache.kafka.clients.CommonClientConfigs;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
-import org.apache.kafka.common.serialization.Serdes;
-import org.apache.kafka.common.serialization.StringSerializer;
 import org.apache.kafka.streams.StreamsConfig;
 import org.junit.After;
 import org.junit.Before;
@@ -62,7 +61,7 @@ public class PensjonsgivendeInntektToInntektSkattIT {
         final Properties config = (Properties)streamsConfiguration.clone();
 
         config.put(StreamsConfig.APPLICATION_ID_CONFIG, "tortuga-loot-streams");
-        config.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass().getName());
+        config.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, SpecificAvroSerde.class);
         config.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, SpecificAvroSerde.class);
         config.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
 
@@ -93,16 +92,18 @@ public class PensjonsgivendeInntektToInntektSkattIT {
         configs.put(KafkaAvroSerializerConfig.SCHEMA_REGISTRY_URL_CONFIG, kafkaEnvironment.getServerPark().getSchemaregistry().getUrl());
 
         Map<String, Object> producerConfig = new HashMap<>(configs);
-        producerConfig.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
+        producerConfig.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, KafkaAvroSerializer.class);
         producerConfig.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, KafkaAvroSerializer.class);
 
         producerConfig.put(ProducerConfig.ACKS_CONFIG, "all");
         producerConfig.put(ProducerConfig.RETRIES_CONFIG, Integer.MAX_VALUE);
 
-        Producer<String, PensjonsgivendeInntekt> producer = new KafkaProducer<>(producerConfig);
+        Producer<HendelseKey, PensjonsgivendeInntekt> producer = new KafkaProducer<>(producerConfig);
 
-        Map<String, PensjonsgivendeInntekt> hendelser = new HashMap<>();
-        hendelser.put("2017-01029804032", new PensjonsgivendeInntekt("01029804032", "2017", Fastlandsinntekt.newBuilder().
+        Map<HendelseKey, PensjonsgivendeInntekt> hendelser = new HashMap<>();
+        hendelser.put(HendelseKey.newBuilder()
+                .setGjelderPeriode("2017")
+                .setIdentifikator("01029804032").build(), new PensjonsgivendeInntekt("01029804032", "2017", Fastlandsinntekt.newBuilder().
                 setPersoninntektBarePensjonsdel(1L).
                 setPersoninntektFiskeFangstFamiliebarnehage(2L).
                 setPersoninntektLoenn(3L).
@@ -110,7 +111,9 @@ public class PensjonsgivendeInntektToInntektSkattIT {
                 .build(), Svalbardinntekt.newBuilder()
                 .setSvalbardLoennLoennstrekkordningen(5L)
                 .setSvalbardPersoninntektNaering(6L).build()));
-        hendelser.put("2017-04057849687", new PensjonsgivendeInntekt("04057849687", "2017", Fastlandsinntekt.newBuilder().
+        hendelser.put(HendelseKey.newBuilder()
+                .setGjelderPeriode("2017")
+                .setIdentifikator("04057849687").build(), new PensjonsgivendeInntekt("04057849687", "2017", Fastlandsinntekt.newBuilder().
                 setPersoninntektBarePensjonsdel(1L).
                 setPersoninntektFiskeFangstFamiliebarnehage(2L).
                 setPersoninntektLoenn(3L).
@@ -118,7 +121,9 @@ public class PensjonsgivendeInntektToInntektSkattIT {
                 .build(), Svalbardinntekt.newBuilder()
                 .setSvalbardLoennLoennstrekkordningen(5L)
                 .setSvalbardPersoninntektNaering(6L).build()));
-        hendelser.put("2017-09038800237", new PensjonsgivendeInntekt("09038800237", "2017", Fastlandsinntekt.newBuilder().
+        hendelser.put(HendelseKey.newBuilder()
+                .setGjelderPeriode("2017")
+                .setIdentifikator("09038800237").build(), new PensjonsgivendeInntekt("09038800237", "2017", Fastlandsinntekt.newBuilder().
                 setPersoninntektBarePensjonsdel(1L).
                 setPersoninntektFiskeFangstFamiliebarnehage(2L).
                 setPersoninntektLoenn(3L).
@@ -126,7 +131,9 @@ public class PensjonsgivendeInntektToInntektSkattIT {
                 .build(), Svalbardinntekt.newBuilder()
                 .setSvalbardLoennLoennstrekkordningen(5L)
                 .setSvalbardPersoninntektNaering(6L).build()));
-        hendelser.put("2017-01029413157", new PensjonsgivendeInntekt("01029413157", "2017", Fastlandsinntekt.newBuilder().
+        hendelser.put(HendelseKey.newBuilder()
+                .setGjelderPeriode("2017")
+                .setIdentifikator("01029413157").build(), new PensjonsgivendeInntekt("01029413157", "2017", Fastlandsinntekt.newBuilder().
                 setPersoninntektBarePensjonsdel(1L).
                 setPersoninntektFiskeFangstFamiliebarnehage(2L).
                 setPersoninntektLoenn(3L).
@@ -134,7 +141,9 @@ public class PensjonsgivendeInntektToInntektSkattIT {
                 .build(), Svalbardinntekt.newBuilder()
                 .setSvalbardLoennLoennstrekkordningen(5L)
                 .setSvalbardPersoninntektNaering(6L).build()));
-        hendelser.put("2017-10026300407", new PensjonsgivendeInntekt("10026300407", "2017", Fastlandsinntekt.newBuilder().
+        hendelser.put(HendelseKey.newBuilder()
+                .setGjelderPeriode("2017")
+                .setIdentifikator("10026300407").build(), new PensjonsgivendeInntekt("10026300407", "2017", Fastlandsinntekt.newBuilder().
                 setPersoninntektBarePensjonsdel(1L).
                 setPersoninntektFiskeFangstFamiliebarnehage(2L).
                 setPersoninntektLoenn(3L).
@@ -142,7 +151,9 @@ public class PensjonsgivendeInntektToInntektSkattIT {
                 .build(), Svalbardinntekt.newBuilder()
                 .setSvalbardLoennLoennstrekkordningen(5L)
                 .setSvalbardPersoninntektNaering(6L).build()));
-        hendelser.put("2017-10016000383", new PensjonsgivendeInntekt("10016000383", "2017", Fastlandsinntekt.newBuilder().
+        hendelser.put(HendelseKey.newBuilder()
+                .setGjelderPeriode("2017")
+                .setIdentifikator("10016000383").build(), new PensjonsgivendeInntekt("10016000383", "2017", Fastlandsinntekt.newBuilder().
                 setPersoninntektBarePensjonsdel(1L).
                 setPersoninntektFiskeFangstFamiliebarnehage(2L).
                 setPersoninntektLoenn(3L).
@@ -150,7 +161,9 @@ public class PensjonsgivendeInntektToInntektSkattIT {
                 .build(), Svalbardinntekt.newBuilder()
                 .setSvalbardLoennLoennstrekkordningen(5L)
                 .setSvalbardPersoninntektNaering(6L).build()));
-        hendelser.put("2017-04063100264", new PensjonsgivendeInntekt("04063100264", "2017", Fastlandsinntekt.newBuilder().
+        hendelser.put(HendelseKey.newBuilder()
+                .setGjelderPeriode("2017")
+                .setIdentifikator("04063100264").build(), new PensjonsgivendeInntekt("04063100264", "2017", Fastlandsinntekt.newBuilder().
                 setPersoninntektBarePensjonsdel(1L).
                 setPersoninntektFiskeFangstFamiliebarnehage(2L).
                 setPersoninntektLoenn(3L).
@@ -158,7 +171,9 @@ public class PensjonsgivendeInntektToInntektSkattIT {
                 .build(), Svalbardinntekt.newBuilder()
                 .setSvalbardLoennLoennstrekkordningen(5L)
                 .setSvalbardPersoninntektNaering(6L).build()));
-        hendelser.put("2017-04116500200", new PensjonsgivendeInntekt("04116500200", "2017", Fastlandsinntekt.newBuilder().
+        hendelser.put(HendelseKey.newBuilder()
+                .setGjelderPeriode("2017")
+                .setIdentifikator("04116500200").build(), new PensjonsgivendeInntekt("04116500200", "2017", Fastlandsinntekt.newBuilder().
                 setPersoninntektBarePensjonsdel(1L).
                 setPersoninntektFiskeFangstFamiliebarnehage(2L).
                 setPersoninntektLoenn(3L).
@@ -166,10 +181,12 @@ public class PensjonsgivendeInntektToInntektSkattIT {
                 .build(), Svalbardinntekt.newBuilder()
                 .setSvalbardLoennLoennstrekkordningen(5L)
                 .setSvalbardPersoninntektNaering(6L).build()));
-        hendelser.put("2017-04126200248", null);
+        hendelser.put(HendelseKey.newBuilder()
+                .setGjelderPeriode("2017")
+                .setIdentifikator("04126200248").build(), null);
 
         final String topic = "aapen-opptjening-pensjonsgivendeInntekt";
-        for (Map.Entry<String, PensjonsgivendeInntekt> entry : hendelser.entrySet()) {
+        for (Map.Entry<HendelseKey, PensjonsgivendeInntekt> entry : hendelser.entrySet()) {
             producer.send(new ProducerRecord<>(topic, entry.getKey(), entry.getValue()));
         }
         producer.flush();

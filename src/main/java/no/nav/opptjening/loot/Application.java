@@ -4,6 +4,7 @@ import io.prometheus.client.Counter;
 import no.nav.opptjening.loot.client.inntektskatt.InntektSkattClient;
 import no.nav.opptjening.nais.NaisHttpServer;
 import no.nav.opptjening.schema.PensjonsgivendeInntekt;
+import no.nav.opptjening.schema.skatt.hendelsesliste.HendelseKey;
 import no.nav.popp.tjenester.inntektskatt.v1.LagreBeregnetSkattSikkerhetsbegrensning;
 import no.nav.popp.tjenester.inntektskatt.v1.LagreBeregnetSkattUgyldigInput;
 import org.apache.kafka.streams.KafkaStreams;
@@ -81,15 +82,10 @@ public class Application {
         PensjonsgivendeInntektMapper pensjonsgivendeInntektMapper = new PensjonsgivendeInntektMapper();
         PensjonsgivendeInntektRecordMapper pensjonsgivendeInntektRecordMapper = new PensjonsgivendeInntektRecordMapper();
 
-        KStream<String, PensjonsgivendeInntekt> stream = builder.stream(KafkaConfiguration.PENSJONSGIVENDE_INNTEKT_TOPIC);
-        stream.mapValues(pensjonsgivendeInntektMapper::mapToInntektSkatt)
-                .mapValues((readOnlyKey, value) -> {
-                    String[] inntektsAarAndPersonIdentifikator = readOnlyKey.split("-");
-                    String inntektsAr = inntektsAarAndPersonIdentifikator[0];
-                    String personidentifikator = inntektsAarAndPersonIdentifikator[1];
-
-                    return pensjonsgivendeInntektRecordMapper.mapToLagreBeregnetSkattRequest(inntektsAr, personidentifikator, value);
-                })
+        KStream<HendelseKey, PensjonsgivendeInntekt> stream = builder.stream(KafkaConfiguration.PENSJONSGIVENDE_INNTEKT_TOPIC);
+        stream.mapValues((readOnlyKey, value) -> pensjonsgivendeInntektMapper.mapToInntektSkatt(value))
+                .mapValues((readOnlyKey, value) -> pensjonsgivendeInntektRecordMapper.mapToLagreBeregnetSkattRequest(readOnlyKey.getGjelderPeriode(),
+                        readOnlyKey.getIdentifikator(), value))
                 .foreach((key, value) -> {
                     try {
                         pensjonsgivendeInntekterProcessed.labels(value.getInntektsaar()).inc();
