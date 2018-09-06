@@ -8,7 +8,7 @@ import no.nav.popp.tjenester.inntektskatt.v1.informasjon.InntektSkatt;
 import no.nav.popp.tjenester.inntektskatt.v1.meldinger.LagreBeregnetSkattRequest;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Rule;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,8 +23,8 @@ import java.util.Map;
 
 public class InntektSkattClientIT {
 
-    @Rule
-    public WireMockRule wireMockRule = new WireMockRule();
+    @ClassRule
+    public static WireMockRule wireMockRule = new WireMockRule();
 
     InntektSkattClient inntektSkattClient;
 
