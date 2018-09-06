@@ -1,47 +1,55 @@
 package no.nav.opptjening.loot;
 
+import com.github.tomakehurst.wiremock.client.WireMock;
+import com.github.tomakehurst.wiremock.junit.WireMockRule;
+import io.confluent.kafka.serializers.AbstractKafkaAvroSerDeConfig;
 import io.confluent.kafka.serializers.KafkaAvroSerializer;
+import io.confluent.kafka.serializers.KafkaAvroSerializerConfig;
+import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerde;
 import no.nav.common.KafkaEnvironment;
+import no.nav.opptjening.loot.client.EndpointSTSClientConfig;
+import no.nav.opptjening.loot.client.inntektskatt.InntektSkattClient;
 import no.nav.opptjening.schema.Fastlandsinntekt;
 import no.nav.opptjening.schema.PensjonsgivendeInntekt;
 import no.nav.opptjening.schema.Svalbardinntekt;
-import no.nav.popp.tjenester.inntektskatt.v1.meldinger.LagreBeregnetSkattRequest;
-import org.apache.kafka.clients.consumer.ConsumerRecord;
-import org.apache.kafka.clients.consumer.ConsumerRecords;
-import org.apache.kafka.clients.producer.*;
-import org.apache.kafka.common.TopicPartition;
+import org.apache.kafka.clients.CommonClientConfigs;
+import org.apache.kafka.clients.consumer.ConsumerConfig;
+import org.apache.kafka.clients.producer.KafkaProducer;
+import org.apache.kafka.clients.producer.Producer;
+import org.apache.kafka.clients.producer.ProducerConfig;
+import org.apache.kafka.clients.producer.ProducerRecord;
+import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.common.serialization.StringSerializer;
+import org.apache.kafka.streams.StreamsConfig;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
 
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.*;
-import java.util.concurrent.CountDownLatch;
-import java.util.stream.IntStream;
-
-import static no.nav.opptjening.loot.LagreBeregnetSkattRequestMapper.recordsToRequestList;
-import static org.junit.Assert.assertEquals;
 
 public class PensjonsgivendeInntektToInntektSkattIT {
 
     private KafkaEnvironment kafkaEnvironment;
     private final List<String> topics = Collections.singletonList(KafkaConfiguration.PENSJONSGIVENDE_INNTEKT_TOPIC);
-    private PensjonsgivendeInntektConsumer pensjonsgivendeInntektConsumer;
-    private final TopicPartition topicPartition = new TopicPartition(KafkaConfiguration.PENSJONSGIVENDE_INNTEKT_TOPIC, 0);
+
+    @Rule
+    public WireMockRule wireMockRule = new WireMockRule();
+
+    private final Properties streamsConfiguration = new Properties();
 
     @Before
     public void setUp() {
         kafkaEnvironment = new KafkaEnvironment(3, topics, true, false, false);
         kafkaEnvironment.start();
 
-        Map<String, String> env = new HashMap<>();
-        env.put(KafkaConfiguration.Properties.BOOTSTRAP_SERVERS, kafkaEnvironment.getBrokersURL());
-        env.put(KafkaConfiguration.Properties.SCHEMA_REGISTRY_URL, kafkaEnvironment.getServerPark().getSchemaregistry().getUrl());
-        env.put(KafkaConfiguration.Properties.SECURITY_PROTOCOL, "PLAINTEXT");
-
-        KafkaConfiguration kafkaConfiguration = new KafkaConfiguration(env);
-
-        pensjonsgivendeInntektConsumer = new PensjonsgivendeInntektConsumer(kafkaConfiguration.getPensjonsgivendeInntektConsumer());
+        streamsConfiguration.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, kafkaEnvironment.getBrokersURL());
+        streamsConfiguration.put(AbstractKafkaAvroSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG, kafkaEnvironment.getServerPark().getSchemaregistry().getUrl());
     }
 
     @After
@@ -50,112 +58,139 @@ public class PensjonsgivendeInntektToInntektSkattIT {
     }
 
     @Test
-    public void consumeFromAllPartitionsInPensjonsgivendeInntektTopicOk() {
-        List<ProducerRecord<String, PensjonsgivendeInntekt>> testRecords = getTestRecords(getPensjonsgivendeInntektList());
-        sendTestRecordsToTopic(testRecords);
+    public void kafkaStreamProcessesCorrectRecordsAndProducesOnNewTopic() throws Exception {
+        final Properties config = (Properties)streamsConfiguration.clone();
 
-        CountDownLatch expectedRecordsPolledLatch = new CountDownLatch(testRecords.size());
-        List<ConsumerRecord<String, PensjonsgivendeInntekt>> recordsFromAllPartitions = getRecordsFromAllPartitions(expectedRecordsPolledLatch);
+        config.put(StreamsConfig.APPLICATION_ID_CONFIG, "tortuga-loot-streams");
+        config.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass().getName());
+        config.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, SpecificAvroSerde.class);
+        config.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
 
-        testRecords.sort(Comparator.comparing(ProducerRecord::key));
-        recordsFromAllPartitions.sort(Comparator.comparing(ConsumerRecord::key));
+        Map<String, String> env = new HashMap<>();
+        env.put("STS_URL", "http://localhost:" + wireMockRule.port() + "/SecurityTokenServiceProvider");
+        env.put("STS_CLIENT_USERNAME", "testusername");
+        env.put("STS_CLIENT_PASSWORD", "testpassword");
+        env.put("INNTEKT_SKATT_URL", "http://localhost:" + wireMockRule.port() + "/popp-ws/InntektSkatt_v1");
 
-        assertEquals(testRecords.size(), recordsFromAllPartitions.size());
+        final InntektSkattClient inntektSkattClient = InntektSkattClient.createFromEnvironment(env, EndpointSTSClientConfig.STS_SAML_POLICY_NO_TRANSPORT_BINDING);
+        final Application app = new Application(config, inntektSkattClient);
 
-        IntStream.range(0, recordsFromAllPartitions.size()).forEach(i -> {
-            assertEquals(testRecords.get(i).key(), recordsFromAllPartitions.get(i).key());
-            assertEquals(testRecords.get(i).value(), recordsFromAllPartitions.get(i).value());
-        });
-    }
+        createTestRecords();
+        createMockApi();
 
-    @Test
-    public void pensjonsgivendeInntektTopicToLagreBeregnetSkattRequest() {
-        List<ProducerRecord<String, PensjonsgivendeInntekt>> testRecords = getTestRecords(getPensjonsgivendeInntektList());
-        sendTestRecordsToTopic(testRecords);
+        try {
+            app.run();
 
-        CountDownLatch expectedRecordsPolledLatch = new CountDownLatch(testRecords.size());
-        List<ConsumerRecord<String, PensjonsgivendeInntekt>> recordsFromAllPartitions = getRecordsFromAllPartitions(expectedRecordsPolledLatch);
-
-        testRecords.sort(Comparator.comparing(ProducerRecord::key));
-        recordsFromAllPartitions.sort(Comparator.comparing(ConsumerRecord::key));
-
-        ConsumerRecords<String, PensjonsgivendeInntekt> consumerRecords = consumerRecordListToConsumerRecords(recordsFromAllPartitions);
-        List<LagreBeregnetSkattRequest> requestList = recordsToRequestList(consumerRecords);
-
-        IntStream.range(0, requestList.size()).forEach(i -> {
-            assertEquals(testRecords.get(i).key(),
-                    String.format("%s-%s", requestList.get(i).getInntektsaar(), requestList.get(i).getPersonIdent()));
-        });
-    }
-
-    private List<ConsumerRecord<String, PensjonsgivendeInntekt>> getRecordsFromAllPartitions(CountDownLatch expectedRecordsPolledLatch) {
-        List<ConsumerRecord<String, PensjonsgivendeInntekt>> recordsFromAllPartitions = new ArrayList<>();
-
-        while(expectedRecordsPolledLatch.getCount() > 0) {
-            ConsumerRecords<String, PensjonsgivendeInntekt> pensjonsgivendeInntektRecords = pensjonsgivendeInntektConsumer.poll(10000);
-            for(ConsumerRecord<String, PensjonsgivendeInntekt> record: pensjonsgivendeInntektRecords) {
-                recordsFromAllPartitions.add(record);
-                expectedRecordsPolledLatch.countDown();
-            }
+            Thread.sleep(15*1000L);
+        } finally {
+            app.shutdown();
         }
-        return recordsFromAllPartitions;
     }
 
-    private ConsumerRecords<String, PensjonsgivendeInntekt> consumerRecordListToConsumerRecords(List<ConsumerRecord<String, PensjonsgivendeInntekt>> consumerRecordList) {
-        Map<TopicPartition, List<ConsumerRecord<String, PensjonsgivendeInntekt>>> map = new HashMap<>();
-        map.put(topicPartition, consumerRecordList);
-        return new ConsumerRecords<>(map);
-    }
+    private void createTestRecords() {
+        Map<String, Object> configs = new HashMap<>();
+        configs.put(CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG, kafkaEnvironment.getBrokersURL());
+        configs.put(KafkaAvroSerializerConfig.SCHEMA_REGISTRY_URL_CONFIG, kafkaEnvironment.getServerPark().getSchemaregistry().getUrl());
 
-    private void sendTestRecordsToTopic(List<ProducerRecord<String, PensjonsgivendeInntekt>> recordList) {
-        Producer<String, PensjonsgivendeInntekt> producer = createDummyProducer();
+        Map<String, Object> producerConfig = new HashMap<>(configs);
+        producerConfig.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
+        producerConfig.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, KafkaAvroSerializer.class);
 
-        for(ProducerRecord record: recordList) {
-            producer.send(record);
+        producerConfig.put(ProducerConfig.ACKS_CONFIG, "all");
+        producerConfig.put(ProducerConfig.RETRIES_CONFIG, Integer.MAX_VALUE);
+
+        Producer<String, PensjonsgivendeInntekt> producer = new KafkaProducer<>(producerConfig);
+
+        Map<String, PensjonsgivendeInntekt> hendelser = new HashMap<>();
+        hendelser.put("2017-01029804032", new PensjonsgivendeInntekt("01029804032", "2017", Fastlandsinntekt.newBuilder().
+                setPersoninntektBarePensjonsdel(1L).
+                setPersoninntektFiskeFangstFamiliebarnehage(2L).
+                setPersoninntektLoenn(3L).
+                setPersoninntektNaering(4L)
+                .build(), Svalbardinntekt.newBuilder()
+                .setSvalbardLoennLoennstrekkordningen(5L)
+                .setSvalbardPersoninntektNaering(6L).build()));
+        hendelser.put("2017-04057849687", new PensjonsgivendeInntekt("04057849687", "2017", Fastlandsinntekt.newBuilder().
+                setPersoninntektBarePensjonsdel(1L).
+                setPersoninntektFiskeFangstFamiliebarnehage(2L).
+                setPersoninntektLoenn(3L).
+                setPersoninntektNaering(4L)
+                .build(), Svalbardinntekt.newBuilder()
+                .setSvalbardLoennLoennstrekkordningen(5L)
+                .setSvalbardPersoninntektNaering(6L).build()));
+        hendelser.put("2017-09038800237", new PensjonsgivendeInntekt("09038800237", "2017", Fastlandsinntekt.newBuilder().
+                setPersoninntektBarePensjonsdel(1L).
+                setPersoninntektFiskeFangstFamiliebarnehage(2L).
+                setPersoninntektLoenn(3L).
+                setPersoninntektNaering(4L)
+                .build(), Svalbardinntekt.newBuilder()
+                .setSvalbardLoennLoennstrekkordningen(5L)
+                .setSvalbardPersoninntektNaering(6L).build()));
+        hendelser.put("2017-01029413157", new PensjonsgivendeInntekt("01029413157", "2017", Fastlandsinntekt.newBuilder().
+                setPersoninntektBarePensjonsdel(1L).
+                setPersoninntektFiskeFangstFamiliebarnehage(2L).
+                setPersoninntektLoenn(3L).
+                setPersoninntektNaering(4L)
+                .build(), Svalbardinntekt.newBuilder()
+                .setSvalbardLoennLoennstrekkordningen(5L)
+                .setSvalbardPersoninntektNaering(6L).build()));
+        hendelser.put("2017-10026300407", new PensjonsgivendeInntekt("10026300407", "2017", Fastlandsinntekt.newBuilder().
+                setPersoninntektBarePensjonsdel(1L).
+                setPersoninntektFiskeFangstFamiliebarnehage(2L).
+                setPersoninntektLoenn(3L).
+                setPersoninntektNaering(4L)
+                .build(), Svalbardinntekt.newBuilder()
+                .setSvalbardLoennLoennstrekkordningen(5L)
+                .setSvalbardPersoninntektNaering(6L).build()));
+        hendelser.put("2017-10016000383", new PensjonsgivendeInntekt("10016000383", "2017", Fastlandsinntekt.newBuilder().
+                setPersoninntektBarePensjonsdel(1L).
+                setPersoninntektFiskeFangstFamiliebarnehage(2L).
+                setPersoninntektLoenn(3L).
+                setPersoninntektNaering(4L)
+                .build(), Svalbardinntekt.newBuilder()
+                .setSvalbardLoennLoennstrekkordningen(5L)
+                .setSvalbardPersoninntektNaering(6L).build()));
+        hendelser.put("2017-04063100264", new PensjonsgivendeInntekt("04063100264", "2017", Fastlandsinntekt.newBuilder().
+                setPersoninntektBarePensjonsdel(1L).
+                setPersoninntektFiskeFangstFamiliebarnehage(2L).
+                setPersoninntektLoenn(3L).
+                setPersoninntektNaering(4L)
+                .build(), Svalbardinntekt.newBuilder()
+                .setSvalbardLoennLoennstrekkordningen(5L)
+                .setSvalbardPersoninntektNaering(6L).build()));
+        hendelser.put("2017-04116500200", new PensjonsgivendeInntekt("04116500200", "2017", Fastlandsinntekt.newBuilder().
+                setPersoninntektBarePensjonsdel(1L).
+                setPersoninntektFiskeFangstFamiliebarnehage(2L).
+                setPersoninntektLoenn(3L).
+                setPersoninntektNaering(4L)
+                .build(), Svalbardinntekt.newBuilder()
+                .setSvalbardLoennLoennstrekkordningen(5L)
+                .setSvalbardPersoninntektNaering(6L).build()));
+        hendelser.put("2017-04126200248", null);
+
+        final String topic = "aapen-opptjening-pensjonsgivendeInntekt";
+        for (Map.Entry<String, PensjonsgivendeInntekt> entry : hendelser.entrySet()) {
+            producer.send(new ProducerRecord<>(topic, entry.getKey(), entry.getValue()));
         }
         producer.flush();
     }
 
-    private List<ProducerRecord<String, PensjonsgivendeInntekt>> getTestRecords(List<PensjonsgivendeInntekt> pensjonsgivendeInntektList) {
-        String topic = KafkaConfiguration.PENSJONSGIVENDE_INNTEKT_TOPIC;
-
-        return Arrays.asList(
-                new ProducerRecord<>(topic,"2017-10097045457", pensjonsgivendeInntektList.get(0)),
-                new ProducerRecord<>(topic,"2018-10098045457", pensjonsgivendeInntektList.get(1)),
-                new ProducerRecord<>(topic,"2017-10099045457", pensjonsgivendeInntektList.get(2)),
-                new ProducerRecord<>(topic,"2018-12345678904", pensjonsgivendeInntektList.get(3)),
-                new ProducerRecord<>(topic,"2017-12345678905", pensjonsgivendeInntektList.get(4)),
-                new ProducerRecord<>(topic,"2017-12345678906", pensjonsgivendeInntektList.get(5))
-        );
-    }
-    
-    private List<PensjonsgivendeInntekt> getPensjonsgivendeInntektList() {
-        
-        Fastlandsinntekt fastlandsinntekt = new Fastlandsinntekt(null, 123000L, 16700L, 99000L);
-        Fastlandsinntekt fastlandsinntekt2 = new Fastlandsinntekt(null, 56000L, 200000L, 99000L);
-        Fastlandsinntekt fastlandsinntekt3 = new Fastlandsinntekt(null, 1230000L, 2900L, 99000L);
-        
-        Svalbardinntekt svalbardinntekt = new Svalbardinntekt(250000L, null);
-        Svalbardinntekt svalbardinntekt2 = new Svalbardinntekt(null, 250000L);
-        Svalbardinntekt svalbardinntekt3 = new Svalbardinntekt(null, null);
-        
-        return Arrays.asList(
-            new PensjonsgivendeInntekt("10097045457", "2017", fastlandsinntekt, svalbardinntekt), 
-            new PensjonsgivendeInntekt("10098045457", "2018", fastlandsinntekt2, svalbardinntekt2),
-            new PensjonsgivendeInntekt("10099045457", "2019", fastlandsinntekt3, svalbardinntekt3),
-            null,
-            null,
-            null
-        );
+    private static String readTestResource(String file) throws Exception {
+        URL url = PensjonsgivendeInntektToInntektSkattIT.class.getResource(file);
+        if (url == null) {
+            throw new RuntimeException("Could not find file " + file);
+        }
+        Path resourcePath = Paths.get(url.toURI());
+        return new String(Files.readAllBytes(resourcePath), StandardCharsets.UTF_8);
     }
 
-    private Producer<String, PensjonsgivendeInntekt> createDummyProducer() {
-        Properties producerProperties = new Properties();
-        producerProperties.put("bootstrap.servers", kafkaEnvironment.getBrokersURL());
-        producerProperties.put("key.serializer", StringSerializer.class);
-        producerProperties.put("value.serializer", KafkaAvroSerializer.class);
-        producerProperties.put("schema.registry.url", kafkaEnvironment.getServerPark().getSchemaregistry().getUrl());
+    private void createMockApi() throws Exception {
+        WireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo("/SecurityTokenServiceProvider"))
+                .withHeader("SOAPAction", WireMock.equalTo("\"http://docs.oasis-open.org/ws-sx/ws-trust/200512/RST/Issue\""))
+                .willReturn(WireMock.okXml(readTestResource("/sts-response.xml"))));
 
-        return new KafkaProducer<>(producerProperties);
+        WireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo("/popp-ws/InntektSkatt_v1"))
+                .withHeader("SOAPAction", WireMock.equalTo("\"http://nav.no/popp/tjenester/inntektskatt/v1/inntektSkatt_v1/LagreBeregnetSkattRequest\""))
+                .willReturn(WireMock.okXml(readTestResource("/popp-response.xml"))));
     }
 }

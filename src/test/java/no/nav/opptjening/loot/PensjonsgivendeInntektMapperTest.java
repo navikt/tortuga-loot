@@ -6,17 +6,27 @@ import no.nav.opptjening.schema.Svalbardinntekt;
 import no.nav.popp.tjenester.inntektskatt.v1.informasjon.InntektSkatt;
 import org.junit.Test;
 
+import java.net.URI;
+
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 
 public class PensjonsgivendeInntektMapperTest {
+
+    private final PensjonsgivendeInntektMapper pensjonsgivendeInntektMapper = new PensjonsgivendeInntektMapper();
+
+    @Test
+    public void uri() throws Exception {
+        URI uri = new URI("http://localhost:8080/foobar");
+        assertEquals("http://localhost:8080/foobar", uri.toString());
+    }
 
     @Test
     public void mapToInntektSkattOk() {
         Fastlandsinntekt fastlandsinntekt = new Fastlandsinntekt(1L,2L,3L,4L);
         Svalbardinntekt svalbardinntekt = new Svalbardinntekt(5L,6L);
         PensjonsgivendeInntekt pensjonsgivendeInntekt = new PensjonsgivendeInntekt("12345678901", "2018", fastlandsinntekt, svalbardinntekt);
-        InntektSkatt inntektSkatt = PensjonsgivendeInntektMapper.mapToInntektSkatt(pensjonsgivendeInntekt);
+        InntektSkatt inntektSkatt = pensjonsgivendeInntektMapper.mapToInntektSkatt(pensjonsgivendeInntekt);
 
         assertEquals((Long) 1L, inntektSkatt.getPersoninntektLoenn());
         assertEquals((Long) 2L, inntektSkatt.getPersoninntektFiskeFangstFamilieBarnehage());
@@ -31,7 +41,7 @@ public class PensjonsgivendeInntektMapperTest {
         Fastlandsinntekt fastlandsinntekt = new Fastlandsinntekt(null,2L,3L,4L);
         Svalbardinntekt svalbardinntekt = new Svalbardinntekt(null,null);
         PensjonsgivendeInntekt pensjonsgivendeInntekt = new PensjonsgivendeInntekt("12345678901", "2018", fastlandsinntekt, svalbardinntekt);
-        InntektSkatt inntektSkatt = PensjonsgivendeInntektMapper.mapToInntektSkatt(pensjonsgivendeInntekt);
+        InntektSkatt inntektSkatt = pensjonsgivendeInntektMapper.mapToInntektSkatt(pensjonsgivendeInntekt);
 
         assertNull(inntektSkatt.getPersoninntektLoenn());
         assertEquals((Long) 2L, inntektSkatt.getPersoninntektFiskeFangstFamilieBarnehage());
@@ -43,7 +53,7 @@ public class PensjonsgivendeInntektMapperTest {
 
     @Test
     public void mapToInntektSkattAsNullOk() {
-        InntektSkatt inntektSkatt = PensjonsgivendeInntektMapper.mapToInntektSkatt(null);
+        InntektSkatt inntektSkatt = pensjonsgivendeInntektMapper.mapToInntektSkatt(null);
         assertNull(inntektSkatt);
     }
 }

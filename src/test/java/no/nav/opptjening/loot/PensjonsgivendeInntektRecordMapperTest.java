@@ -4,12 +4,12 @@ import no.nav.popp.tjenester.inntektskatt.v1.informasjon.InntektSkatt;
 import no.nav.popp.tjenester.inntektskatt.v1.meldinger.LagreBeregnetSkattRequest;
 import org.junit.Test;
 
-import static no.nav.opptjening.loot.PensjonsgivendeInntektRecordMapper.*;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 
 public class PensjonsgivendeInntektRecordMapperTest {
 
+    private final PensjonsgivendeInntektRecordMapper pensjonsgivendeInntektRecordMapper = new PensjonsgivendeInntektRecordMapper();
 
     @Test
     public void mapToBeregnetSkattRequestWithInntektSkattOk() {
@@ -21,8 +21,8 @@ public class PensjonsgivendeInntektRecordMapperTest {
         inntektSkatt.setSvalbardLoennLoennstrekkordningen(5000L);
         inntektSkatt.setSvalbardPersoninntektNaering(4000L);
 
-        String recordKey = "2017-12345678901";
-        LagreBeregnetSkattRequest lagreBeregnetSkattRequest = mapToLagreBeregnetSkattRequest(recordKey, inntektSkatt);
+        LagreBeregnetSkattRequest lagreBeregnetSkattRequest = pensjonsgivendeInntektRecordMapper
+                .mapToLagreBeregnetSkattRequest("2017", "12345678901", inntektSkatt);
 
         assertEquals("2017", lagreBeregnetSkattRequest.getInntektsaar());
         assertEquals("12345678901", lagreBeregnetSkattRequest.getPersonIdent());
@@ -44,8 +44,8 @@ public class PensjonsgivendeInntektRecordMapperTest {
         inntektSkatt.setSvalbardLoennLoennstrekkordningen(null);
         inntektSkatt.setSvalbardPersoninntektNaering(4000L);
 
-        String recordKey = "2017-12345678902";
-        LagreBeregnetSkattRequest lagreBeregnetSkattRequest = mapToLagreBeregnetSkattRequest(recordKey, inntektSkatt);
+        LagreBeregnetSkattRequest lagreBeregnetSkattRequest = pensjonsgivendeInntektRecordMapper.
+                mapToLagreBeregnetSkattRequest("2017", "12345678902", inntektSkatt);
 
         assertEquals("2017", lagreBeregnetSkattRequest.getInntektsaar());
         assertEquals("12345678902", lagreBeregnetSkattRequest.getPersonIdent());
@@ -67,8 +67,8 @@ public class PensjonsgivendeInntektRecordMapperTest {
         inntektSkatt.setSvalbardLoennLoennstrekkordningen(null);
         inntektSkatt.setSvalbardPersoninntektNaering(null);
 
-        String recordKey = "2017-12345678902";
-        LagreBeregnetSkattRequest lagreBeregnetSkattRequest = mapToLagreBeregnetSkattRequest(recordKey, inntektSkatt);
+        LagreBeregnetSkattRequest lagreBeregnetSkattRequest = pensjonsgivendeInntektRecordMapper
+                .mapToLagreBeregnetSkattRequest("2017", "12345678902", inntektSkatt);
 
         assertEquals("2017", lagreBeregnetSkattRequest.getInntektsaar());
         assertEquals("12345678902", lagreBeregnetSkattRequest.getPersonIdent());
@@ -84,10 +84,10 @@ public class PensjonsgivendeInntektRecordMapperTest {
     public void mapToBeregnetSkattRequestWithInntektSkattNullOk() {
         InntektSkatt inntektSkatt = null;
 
-        String key = "2018-12345678902";
-        LagreBeregnetSkattRequest lagreBeregnetSkattRequest = mapToLagreBeregnetSkattRequest(key, inntektSkatt);
+        LagreBeregnetSkattRequest lagreBeregnetSkattRequest = pensjonsgivendeInntektRecordMapper.
+                mapToLagreBeregnetSkattRequest("2017", "12345678902", inntektSkatt);
 
-        assertEquals("2018", lagreBeregnetSkattRequest.getInntektsaar());
+        assertEquals("2017", lagreBeregnetSkattRequest.getInntektsaar());
         assertEquals("12345678902", lagreBeregnetSkattRequest.getPersonIdent());
         assertNull(lagreBeregnetSkattRequest.getInntektSkatt());
     }

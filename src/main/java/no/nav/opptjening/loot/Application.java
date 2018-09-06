@@ -1,62 +1,60 @@
 package no.nav.opptjening.loot;
 
-import no.nav.opptjening.loot.client.InntektSkattClient;
-import no.nav.opptjening.loot.client.InntektSkattClientConfiguration;
-import no.nav.opptjening.loot.sts.STSClientConfig;
-import no.nav.opptjening.loot.sts.SrvLootStsProperties;
+import io.prometheus.client.Counter;
+import no.nav.opptjening.loot.client.inntektskatt.InntektSkattClient;
 import no.nav.opptjening.nais.NaisHttpServer;
 import no.nav.opptjening.schema.PensjonsgivendeInntekt;
 import no.nav.popp.tjenester.inntektskatt.v1.LagreBeregnetSkattSikkerhetsbegrensning;
 import no.nav.popp.tjenester.inntektskatt.v1.LagreBeregnetSkattUgyldigInput;
-import no.nav.popp.tjenester.inntektskatt.v1.meldinger.LagreBeregnetSkattRequest;
-import org.apache.cxf.jaxws.JaxWsProxyFactoryBean;
-import org.apache.kafka.clients.consumer.ConsumerRecords;
+import org.apache.kafka.streams.KafkaStreams;
+import org.apache.kafka.streams.StreamsBuilder;
+import org.apache.kafka.streams.kstream.KStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Map;
-
-import static no.nav.opptjening.loot.LagreBeregnetSkattRequestMapper.recordsToRequestList;
+import java.util.Properties;
 
 public class Application {
 
     private static final Logger LOG = LoggerFactory.getLogger(Application.class);
-    private final PensjonsgivendeInntektConsumer pensjonsgivendeInntektConsumer;
+
     private final InntektSkattClient inntektSkattClient;
 
-    public Application(PensjonsgivendeInntektConsumer pensjonsgivendeInntektConsumer,
-                       InntektSkattClient inntektSkattClient) {
-        this.pensjonsgivendeInntektConsumer = pensjonsgivendeInntektConsumer;
-        this.inntektSkattClient = inntektSkattClient;
+    private final KafkaStreams streams;
+
+    private final NaisHttpServer naisHttpServer = new NaisHttpServer();
+
+    private volatile boolean shutdown = false;
+
+    private static final Counter pensjonsgivendeInntekterProcessedTotal = Counter.build()
+            .name("pensjonsgivende_inntekter_processed_total")
+            .help("Antall pensjonsgivende inntekter prosessert").register();
+    private static final Counter pensjonsgivendeInntekterProcessed = Counter.build()
+            .name("pensjonsgivende_inntekter_processed")
+            .labelNames("year")
+            .help("Antall pensjonsgivende inntekter prosessert").register();
+
+    private static final boolean dryRun;
+
+    static {
+        dryRun = "true".equalsIgnoreCase(System.getenv().getOrDefault("DRY_RUN", "false"));
     }
 
     public static void main(String[] args) {
-
         final Application app;
 
         try {
-
             Map<String, String> env = System.getenv();
 
-            NaisHttpServer naisHttpServer = new NaisHttpServer();
-            naisHttpServer.start();
-
             KafkaConfiguration kafkaConfiguration = new KafkaConfiguration(env);
-            PensjonsgivendeInntektConsumer pensjonsgivendeInntektConsumer =
-                    new PensjonsgivendeInntektConsumer(kafkaConfiguration.getPensjonsgivendeInntektConsumer());
 
-            SrvLootStsProperties srvLootStsProperties = new SrvLootStsProperties();
-            STSClientConfig stsClientConfig = new STSClientConfig();
-            InntektSkattClientConfiguration inntektSkattClientConfiguration =
-                    new InntektSkattClientConfiguration(JaxWsProxyFactoryBean::new, env, srvLootStsProperties, stsClientConfig);
-            InntektSkattClient inntektSkattClient = new InntektSkattClient(inntektSkattClientConfiguration.configureAndGetClient());
+            InntektSkattClient inntektSkattClient = InntektSkattClient.createFromEnvironment(env);
 
-
-            app = new Application(pensjonsgivendeInntektConsumer, inntektSkattClient);
-            Runtime.getRuntime().addShutdownHook(new Thread(pensjonsgivendeInntektConsumer::close));
-
+            app = new Application(kafkaConfiguration.streamsConfiguration(), inntektSkattClient);
+            app.startHttpServer();
             app.run();
-        } catch (Exception e) {
+        } catch (Throwable e) {
             LOG.error("Application failed to start", e);
         } finally {
             LOG.warn("Shutting down application.");
@@ -64,24 +62,84 @@ public class Application {
         }
     }
 
-    public void run() {
-        try {
-            while (true) {
-                ConsumerRecords<String, PensjonsgivendeInntekt> pensjonsgivendeInntektRecords = pensjonsgivendeInntektConsumer.poll(500);
+    public Application(Properties streamsProperties,
+                       InntektSkattClient inntektSkattClient) {
+        this.inntektSkattClient = inntektSkattClient;
 
-                for (LagreBeregnetSkattRequest lagreBeregnetSkattRequest : recordsToRequestList(pensjonsgivendeInntektRecords)) {
+        StreamsBuilder builder = new StreamsBuilder();
+
+        createStream(builder);
+
+        streams = new KafkaStreams(builder.build(), streamsProperties);
+        streams.setUncaughtExceptionHandler((t, e) -> {
+            LOG.error("Uncaught exception in thread {}, closing streams", t, e);
+            shutdown();
+        });
+
+        Runtime.getRuntime().addShutdownHook(new Thread(this::shutdown));
+    }
+
+    private void createStream(StreamsBuilder builder) {
+        PensjonsgivendeInntektMapper pensjonsgivendeInntektMapper = new PensjonsgivendeInntektMapper();
+        PensjonsgivendeInntektRecordMapper pensjonsgivendeInntektRecordMapper = new PensjonsgivendeInntektRecordMapper();
+
+        KStream<String, PensjonsgivendeInntekt> stream = builder.stream(KafkaConfiguration.PENSJONSGIVENDE_INNTEKT_TOPIC);
+        stream.mapValues(pensjonsgivendeInntektMapper::mapToInntektSkatt)
+                .mapValues((readOnlyKey, value) -> {
+                    String[] inntektsAarAndPersonIdentifikator = readOnlyKey.split("-");
+                    String inntektsAr = inntektsAarAndPersonIdentifikator[0];
+                    String personidentifikator = inntektsAarAndPersonIdentifikator[1];
+
+                    return pensjonsgivendeInntektRecordMapper.mapToLagreBeregnetSkattRequest(inntektsAr, personidentifikator, value);
+                })
+                .foreach((key, value) -> {
                     try {
-                        inntektSkattClient.lagreBeregnetSkatt(lagreBeregnetSkattRequest);
+                        pensjonsgivendeInntekterProcessed.labels(value.getInntektsaar()).inc();
+                        pensjonsgivendeInntekterProcessedTotal.inc();
+
+                        LOG.debug("Saving record={} for key={}", value, key);
+                        if (dryRun) {
+                            LOG.info("Skipping because dryRun");
+                        } else {
+                            inntektSkattClient.lagreBeregnetSkatt(value);
+                        }
                     } catch (LagreBeregnetSkattUgyldigInput e) {
-                        LOG.warn("Ugyldig input til InntektSkatt.lagreBeregnetSkatt", e);
+                        LOG.error("Ugyldig input til InntektSkatt.lagreBeregnetSkatt", e);
+                        throw new RuntimeException(e);
+                    } catch (LagreBeregnetSkattSikkerhetsbegrensning e) {
+                        LOG.error("LagreBeregnetSkattSikkerhetsbegrensning", e);
+                        throw new RuntimeException(e);
                     }
-                }
-                pensjonsgivendeInntektConsumer.commit();
-            }
-        } catch (LagreBeregnetSkattSikkerhetsbegrensning e) {
-            LOG.error("Sikkerhetsbegrensning", e);
-        } catch (RuntimeException e) {
-            LOG.error("Error during processing of PensjonsgivendeInntekt", e);
+                });
+    }
+
+    public void shutdown() {
+        if (shutdown) {
+            return;
         }
+        shutdown = true;
+
+        streams.close();
+        try {
+            naisHttpServer.stop();
+        } catch (Exception e) {
+            LOG.error("Error while shutting down nais http server", e);
+        }
+    }
+
+    public void startHttpServer() throws Exception {
+        naisHttpServer.start();
+    }
+
+    public void run() {
+        streams.setStateListener((newState, oldState) -> {
+            LOG.debug("State change from {} to {}", oldState, newState);
+            if ((oldState.equals(KafkaStreams.State.PENDING_SHUTDOWN) && newState.equals(KafkaStreams.State.NOT_RUNNING)) ||
+                    (oldState.isRunning() && newState.equals(KafkaStreams.State.ERROR))) {
+                LOG.warn("Stream shutdown, stopping nais http server");
+                shutdown();
+            }
+        });
+        streams.start();
     }
 }

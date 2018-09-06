@@ -1,15 +1,13 @@
 package no.nav.opptjening.loot;
 
-import io.confluent.kafka.serializers.KafkaAvroDeserializer;
-import io.confluent.kafka.serializers.KafkaAvroDeserializerConfig;
-import no.nav.opptjening.schema.PensjonsgivendeInntekt;
+import io.confluent.kafka.serializers.AbstractKafkaAvroSerDeConfig;
+import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerde;
 import org.apache.kafka.clients.CommonClientConfigs;
-import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
-import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.config.SaslConfigs;
 import org.apache.kafka.common.config.SslConfigs;
-import org.apache.kafka.common.serialization.StringDeserializer;
+import org.apache.kafka.common.serialization.Serdes;
+import org.apache.kafka.streams.StreamsConfig;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -102,18 +100,16 @@ public class KafkaConfiguration {
         return configs;
     }
 
-    public Consumer<String, PensjonsgivendeInntekt> getPensjonsgivendeInntektConsumer() {
+    public java.util.Properties streamsConfiguration() {
         Map<String, Object> configs = getCommonConfigs();
-        configs.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
-        configs.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, KafkaAvroDeserializer.class);
-        configs.put(KafkaAvroDeserializerConfig.SCHEMA_REGISTRY_URL_CONFIG, schemaUrl);
-        configs.put(KafkaAvroDeserializerConfig.SPECIFIC_AVRO_READER_CONFIG, true);
-
-        configs.put(ConsumerConfig.GROUP_ID_CONFIG, "loot-consumer-group");
-        configs.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, false);
-        configs.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
-
-       return new KafkaConsumer<>(configs);
+        final java.util.Properties streamsConfiguration = new java.util.Properties();
+        streamsConfiguration.putAll(configs);
+        streamsConfiguration.put(StreamsConfig.APPLICATION_ID_CONFIG, "tortuga-loot-eur8d948fe");
+        streamsConfiguration.put(AbstractKafkaAvroSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG, schemaUrl);
+        streamsConfiguration.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass().getName());
+        streamsConfiguration.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, SpecificAvroSerde.class);
+        streamsConfiguration.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
+        return streamsConfiguration;
     }
 
     private static File resourceToFile(String path) throws FileNotFoundException {
