@@ -56,8 +56,6 @@ public class Application {
             app.run();
         } catch (Throwable e) {
             LOG.error("Application failed to start", e);
-        } finally {
-            LOG.warn("Shutting down application.");
             System.exit(1);
         }
     }
