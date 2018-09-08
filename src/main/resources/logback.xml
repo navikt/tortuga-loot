@@ -5,6 +5,7 @@
     </appender>
 
     <logger name="no.nav.opptjening" level="TRACE" />
+    <logger name="org.apache.cxf" level="TRACE" />
 
     <root level="WARN">
         <appender-ref ref="STDOUT_JSON" />
