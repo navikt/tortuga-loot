@@ -2,7 +2,7 @@ name: tortuga-loot
 image: repo.adeo.no:5443/tortuga-loot
 replicas:
   min: 3
-  max: 3
+  max: 20
 resources:
   limits:
     cpu: 1000m
