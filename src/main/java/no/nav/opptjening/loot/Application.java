@@ -24,7 +24,7 @@ public class Application {
 
     private final KafkaStreams streams;
 
-    private final NaisHttpServer naisHttpServer = new NaisHttpServer();
+    private final NaisHttpServer naisHttpServer;
 
     private volatile boolean shutdown = false;
 
@@ -74,6 +74,8 @@ public class Application {
             LOG.error("Uncaught exception in thread {}, closing streams", t, e);
             shutdown();
         });
+
+        naisHttpServer = new NaisHttpServer(()->streams.state().isRunning(), ()->true);
 
         Runtime.getRuntime().addShutdownHook(new Thread(this::shutdown));
     }
