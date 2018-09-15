@@ -1,5 +1,6 @@
 name: tortuga-loot
 image: repo.adeo.no:5443/tortuga-loot
+team: peon
 replicas:
   min: 3
   max: 20
