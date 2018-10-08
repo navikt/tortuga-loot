@@ -24,12 +24,4 @@ public class InntektSkattPropertiesTest {
         applicationEnvironment.put("INNTEKT_SKATT_URL", malformedUrl);
         InntektSkattProperties.createFromEnvironment(applicationEnvironment);
     }
-
-    @Test
-    public void createFromEnvironment_setsInntektSkattPropertiesUrl_when_INNTEKT_SKATT_URL_isNotNull() throws Exception {
-        String urlToInntektSkattWs = "http://url_to_popp.com";
-        applicationEnvironment.put("INNTEKT_SKATT_URL", urlToInntektSkattWs);
-        InntektSkattProperties inntektSkattProperties = InntektSkattProperties.createFromEnvironment(applicationEnvironment);
-        assertEquals(urlToInntektSkattWs, inntektSkattProperties.getUrl());
-    }
 }
