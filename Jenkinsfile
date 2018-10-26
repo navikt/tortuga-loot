@@ -46,7 +46,7 @@ node {
         stage("deploy preprod") {
             build([
                     job       : 'nais-deploy-pipeline',
-                    wait      : false,
+                    propagate : true,
                     parameters: [
                             string(name: 'APP', value: "tortuga-loot"),
                             string(name: 'REPO', value: "navikt/tortuga-loot"),
@@ -60,7 +60,7 @@ node {
         stage("deploy prod") {
             build([
                     job       : 'nais-deploy-pipeline',
-                    wait      : false,
+                    propagate : true,
                     parameters: [
                             string(name: 'APP', value: "tortuga-loot"),
                             string(name: 'REPO', value: "navikt/tortuga-loot"),
