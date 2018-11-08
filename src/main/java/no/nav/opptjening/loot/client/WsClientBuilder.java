@@ -20,6 +20,7 @@ public class WsClientBuilder {
         factory.setAddress(serviceUrl);
         factory.setServiceClass(serviceClass);
         factory.getFeatures().add(new LoggingFeature());
+        factory.getInInterceptors().add(new PoppFaultLoggingInterceptor());
 
         return (T)factory.create();
     }
