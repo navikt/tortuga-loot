@@ -2,23 +2,25 @@
 @Library('peon-pipeline') _
 
 node {
+    def appName = "tortuga-loot"
+    def appToken
     def commitHash
     try {
         cleanWs()
 
         def version
         stage("checkout") {
-            withCredentials([string(credentialsId: 'navikt-ci-oauthtoken', variable: 'GITHUB_OAUTH_TOKEN')]) {
-                sh "git init"
-                sh "git pull https://${GITHUB_OAUTH_TOKEN}:x-oauth-basic@github.com/navikt/tortuga-loot.git"
-            }
+            appToken = github.generateAppToken()
+
+            sh "git init"
+            sh "git pull https://x-access-token:$appToken@github.com/navikt/$appName.git"
 
             sh "make bump-version"
 
             version = sh(script: 'cat VERSION', returnStdout: true).trim()
 
             commitHash = sh(script: 'git rev-parse HEAD', returnStdout: true).trim()
-            github.commitStatus("navikt-ci-oauthtoken", "navikt/tortuga-loot", 'continuous-integration/jenkins', commitHash, 'pending', "Build #${env.BUILD_NUMBER} has started")
+            github.commitStatus("pending", "navikt/$appName", appToken, commitHash)
         }
 
         stage("build") {
@@ -32,9 +34,7 @@ node {
 
             sh "make release"
 
-            withCredentials([string(credentialsId: 'navikt-ci-oauthtoken', variable: 'GITHUB_OAUTH_TOKEN')]) {
-                sh "git push --tags https://${GITHUB_OAUTH_TOKEN}@github.com/navikt/tortuga-loot HEAD:master"
-            }
+            sh "git push --tags https://x-access-token:$appToken@github.com/navikt/$appName HEAD:master"
         }
 
         stage("upload manifest") {
@@ -48,8 +48,8 @@ node {
                     job       : 'nais-deploy-pipeline',
                     propagate : true,
                     parameters: [
-                            string(name: 'APP', value: "tortuga-loot"),
-                            string(name: 'REPO', value: "navikt/tortuga-loot"),
+                            string(name: 'APP', value: appName),
+                            string(name: 'REPO', value: "navikt/$appName"),
                             string(name: 'VERSION', value: version),
                             string(name: 'COMMIT_HASH', value: commitHash),
                             string(name: 'DEPLOY_ENV', value: 'q0')
@@ -62,8 +62,8 @@ node {
                     job       : 'nais-deploy-pipeline',
                     propagate : true,
                     parameters: [
-                            string(name: 'APP', value: "tortuga-loot"),
-                            string(name: 'REPO', value: "navikt/tortuga-loot"),
+                            string(name: 'APP', value: appName),
+                            string(name: 'REPO', value: "navikt/$appName"),
                             string(name: 'VERSION', value: version),
                             string(name: 'COMMIT_HASH', value: commitHash),
                             string(name: 'DEPLOY_ENV', value: 'p')
@@ -71,10 +71,11 @@ node {
             ])
         }
 
-        github.commitStatus("navikt-ci-oauthtoken", "navikt/tortuga-loot", 'continuous-integration/jenkins', commitHash, 'success', "Build #${env.BUILD_NUMBER} has finished")
+        github.commitStatus("success", "navikt/$appName", appToken, commitHash)
     } catch (err) {
-        github.commitStatus("navikt-ci-oauthtoken", "navikt/tortuga-loot", 'continuous-integration/jenkins', commitHash, 'failure', "Build #${env.BUILD_NUMBER} has failed")
+        github.commitStatus("failure", "navikt/$appName", appToken, commitHash)
 
         throw err
     }
 }
+
