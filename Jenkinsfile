@@ -2,7 +2,6 @@
 @Library('peon-pipeline') _
 
 node {
-    def appName = "tortuga-loot"
     def appToken
     def commitHash
     try {
@@ -13,14 +12,14 @@ node {
             appToken = github.generateAppToken()
 
             sh "git init"
-            sh "git pull https://x-access-token:$appToken@github.com/navikt/$appName.git"
+            sh "git pull https://x-access-token:$appToken@github.com/navikt/tortuga-loot.git"
 
             sh "make bump-version"
 
             version = sh(script: 'cat VERSION', returnStdout: true).trim()
-
             commitHash = sh(script: 'git rev-parse HEAD', returnStdout: true).trim()
-            github.commitStatus("pending", "navikt/$appName", appToken, commitHash)
+
+            github.commitStatus("pending", "navikt/tortuga-loot", appToken, commitHash)
         }
 
         stage("build") {
@@ -34,7 +33,7 @@ node {
 
             sh "make release"
 
-            sh "git push --tags https://x-access-token:$appToken@github.com/navikt/$appName HEAD:master"
+            sh "git push --tags https://x-access-token:$appToken@github.com/navikt/tortuga-loot HEAD:master"
         }
 
         stage("upload manifest") {
@@ -48,8 +47,8 @@ node {
                     job       : 'nais-deploy-pipeline',
                     propagate : true,
                     parameters: [
-                            string(name: 'APP', value: appName),
-                            string(name: 'REPO', value: "navikt/$appName"),
+                            string(name: 'APP', value: "tortuga-loot"),
+                            string(name: 'REPO', value: "navikt/tortuga-loot"),
                             string(name: 'VERSION', value: version),
                             string(name: 'COMMIT_HASH', value: commitHash),
                             string(name: 'DEPLOY_ENV', value: 'q0')
@@ -62,8 +61,8 @@ node {
                     job       : 'nais-deploy-pipeline',
                     propagate : true,
                     parameters: [
-                            string(name: 'APP', value: appName),
-                            string(name: 'REPO', value: "navikt/$appName"),
+                            string(name: 'APP', value: "tortuga-loot"),
+                            string(name: 'REPO', value: "navikt/tortuga-loot"),
                             string(name: 'VERSION', value: version),
                             string(name: 'COMMIT_HASH', value: commitHash),
                             string(name: 'DEPLOY_ENV', value: 'p')
@@ -71,11 +70,9 @@ node {
             ])
         }
 
-        github.commitStatus("success", "navikt/$appName", appToken, commitHash)
+        github.commitStatus("success", "navikt/tortuga-loot", appToken, commitHash)
     } catch (err) {
-        github.commitStatus("failure", "navikt/$appName", appToken, commitHash)
-
+        github.commitStatus("failure", "navikt/tortuga-loot", appToken, commitHash)
         throw err
     }
 }
-
