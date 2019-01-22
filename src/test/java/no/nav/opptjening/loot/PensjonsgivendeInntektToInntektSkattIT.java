@@ -26,11 +26,11 @@ import org.junit.Rule;
 import org.junit.Test;
 
 import java.net.URL;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
+
 
 public class PensjonsgivendeInntektToInntektSkattIT {
 
@@ -44,16 +44,16 @@ public class PensjonsgivendeInntektToInntektSkattIT {
 
     @Before
     public void setUp() {
-        kafkaEnvironment = new KafkaEnvironment(3, topics, true, false, false);
+        kafkaEnvironment = new KafkaEnvironment(2, topics, true, false, Collections.emptyList(), false);
         kafkaEnvironment.start();
 
         streamsConfiguration.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, kafkaEnvironment.getBrokersURL());
-        streamsConfiguration.put(AbstractKafkaAvroSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG, kafkaEnvironment.getServerPark().getSchemaregistry().getUrl());
+        streamsConfiguration.put(AbstractKafkaAvroSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG, kafkaEnvironment.getSchemaRegistry().getUrl());
     }
 
     @After
     public void tearDown() {
-        kafkaEnvironment.stop();
+        kafkaEnvironment.tearDown();
     }
 
     @Test
@@ -89,7 +89,7 @@ public class PensjonsgivendeInntektToInntektSkattIT {
     private void createTestRecords() {
         Map<String, Object> configs = new HashMap<>();
         configs.put(CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG, kafkaEnvironment.getBrokersURL());
-        configs.put(KafkaAvroSerializerConfig.SCHEMA_REGISTRY_URL_CONFIG, kafkaEnvironment.getServerPark().getSchemaregistry().getUrl());
+        configs.put(KafkaAvroSerializerConfig.SCHEMA_REGISTRY_URL_CONFIG, kafkaEnvironment.getSchemaRegistry().getUrl());
 
         Map<String, Object> producerConfig = new HashMap<>(configs);
         producerConfig.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, KafkaAvroSerializer.class);
@@ -198,7 +198,7 @@ public class PensjonsgivendeInntektToInntektSkattIT {
             throw new RuntimeException("Could not find file " + file);
         }
         Path resourcePath = Paths.get(url.toURI());
-        return new String(Files.readAllBytes(resourcePath), StandardCharsets.UTF_8);
+        return Files.readString(resourcePath);
     }
 
     private void createMockApi() throws Exception {
