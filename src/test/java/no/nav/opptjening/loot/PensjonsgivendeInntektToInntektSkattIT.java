@@ -1,18 +1,14 @@
 package no.nav.opptjening.loot;
 
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
+
 import com.github.tomakehurst.wiremock.client.WireMock;
 import com.github.tomakehurst.wiremock.junit.WireMockRule;
-import io.confluent.kafka.serializers.AbstractKafkaAvroSerDeConfig;
-import io.confluent.kafka.serializers.KafkaAvroSerializer;
-import io.confluent.kafka.serializers.KafkaAvroSerializerConfig;
-import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerde;
-import no.nav.common.KafkaEnvironment;
-import no.nav.opptjening.loot.client.EndpointSTSClientConfig;
-import no.nav.opptjening.loot.client.inntektskatt.InntektSkattClient;
-import no.nav.opptjening.schema.Fastlandsinntekt;
-import no.nav.opptjening.schema.PensjonsgivendeInntekt;
-import no.nav.opptjening.schema.Svalbardinntekt;
-import no.nav.opptjening.schema.skatt.hendelsesliste.HendelseKey;
+
 import org.apache.kafka.clients.CommonClientConfigs;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.producer.KafkaProducer;
@@ -25,17 +21,25 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 
-import java.net.URL;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.*;
+import io.confluent.kafka.serializers.AbstractKafkaAvroSerDeConfig;
+import io.confluent.kafka.serializers.KafkaAvroSerializer;
+import io.confluent.kafka.serializers.KafkaAvroSerializerConfig;
+import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerde;
 
+import no.nav.common.KafkaEnvironment;
+import no.nav.opptjening.loot.client.inntektskatt.InntektSkattClient;
+import no.nav.opptjening.loot.sts.TokenClient;
+import no.nav.opptjening.schema.Fastlandsinntekt;
+import no.nav.opptjening.schema.PensjonsgivendeInntekt;
+import no.nav.opptjening.schema.Svalbardinntekt;
+import no.nav.opptjening.schema.skatt.hendelsesliste.HendelseKey;
 
 public class PensjonsgivendeInntektToInntektSkattIT {
 
     private KafkaEnvironment kafkaEnvironment;
     private final List<String> topics = Collections.singletonList(KafkaConfiguration.PENSJONSGIVENDE_INNTEKT_TOPIC);
+    private static final String STSEndpoint = "/SecurityTokenServiceProvider";
+    private static final String InntektSkattEndpoint = "/popp-ws/InntektSkatt_v1";
 
     @Rule
     public WireMockRule wireMockRule = new WireMockRule();
@@ -58,7 +62,7 @@ public class PensjonsgivendeInntektToInntektSkattIT {
 
     @Test
     public void kafkaStreamProcessesCorrectRecordsAndProducesOnNewTopic() throws Exception {
-        final Properties config = (Properties)streamsConfiguration.clone();
+        final Properties config = (Properties) streamsConfiguration.clone();
 
         config.put(StreamsConfig.APPLICATION_ID_CONFIG, "tortuga-loot-streams");
         config.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, SpecificAvroSerde.class);
@@ -66,13 +70,14 @@ public class PensjonsgivendeInntektToInntektSkattIT {
         config.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
 
         Map<String, String> env = new HashMap<>();
-        env.put("STS_URL", "http://localhost:" + wireMockRule.port() + "/SecurityTokenServiceProvider");
+        env.put("STS_URL", "http://localhost:" + wireMockRule.port() + STSEndpoint);
         env.put("STS_CLIENT_USERNAME", "testusername");
         env.put("STS_CLIENT_PASSWORD", "testpassword");
-        env.put("INNTEKT_SKATT_URL", "http://localhost:" + wireMockRule.port() + "/popp-ws/InntektSkatt_v1");
+        env.put("INNTEKT_SKATT_URL", "http://localhost:" + wireMockRule.port() + InntektSkattEndpoint);
 
-        final InntektSkattClient inntektSkattClient = InntektSkattClient.createFromEnvironment(env, EndpointSTSClientConfig.STS_SAML_POLICY_NO_TRANSPORT_BINDING);
-        final Application app = new Application(config, inntektSkattClient);
+        final InntektSkattClient inntektSkattClient = new InntektSkattClient(env);
+        final TokenClient tokenClient = new TokenClient(env);
+        final Application app = new Application(config, inntektSkattClient, tokenClient);
 
         createTestRecords();
         createMockApi();
@@ -80,7 +85,7 @@ public class PensjonsgivendeInntektToInntektSkattIT {
         try {
             app.run();
 
-            Thread.sleep(15*1000L);
+            Thread.sleep(15 * 1000L);
         } finally {
             app.shutdown();
         }
@@ -192,22 +197,15 @@ public class PensjonsgivendeInntektToInntektSkattIT {
         producer.flush();
     }
 
-    private static String readTestResource(String file) throws Exception {
-        URL url = PensjonsgivendeInntektToInntektSkattIT.class.getResource(file);
-        if (url == null) {
-            throw new RuntimeException("Could not find file " + file);
-        }
-        Path resourcePath = Paths.get(url.toURI());
-        return Files.readString(resourcePath);
-    }
+    private void createMockApi() {
+        WireMock.stubFor(WireMock.get(WireMock.urlPathEqualTo(STSEndpoint))
+                .withQueryParam("grant_type", WireMock.matching("client_credentials"))
+                .withQueryParam("scope", WireMock.matching("openid"))
+                .willReturn(WireMock.okJson("{\"access_token\":\"eyJ4vaea3\",\"expires_in\":\"3600\",\"token_type\":\"Bearer\"}")));
 
-    private void createMockApi() throws Exception {
-        WireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo("/SecurityTokenServiceProvider"))
-                .withHeader("SOAPAction", WireMock.equalTo("\"http://docs.oasis-open.org/ws-sx/ws-trust/200512/RST/Issue\""))
-                .willReturn(WireMock.okXml(readTestResource("/sts-response.xml"))));
-
-        WireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo("/popp-ws/InntektSkatt_v1"))
-                .withHeader("SOAPAction", WireMock.equalTo("\"http://nav.no/popp/tjenester/inntektskatt/v1/inntektSkatt_v1/LagreBeregnetSkattRequest\""))
-                .willReturn(WireMock.okXml(readTestResource("/popp-response.xml"))));
+        WireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo(InntektSkattEndpoint))
+                .withHeader("Authorization", WireMock.matching("Bearer " + "eyJ4vaea3"))
+                .willReturn(WireMock.okJson("{\"LagreBeregnetSkattResponse\":\"{}\"}"))
+        );
     }
 }

@@ -1,31 +1,32 @@
 package no.nav.opptjening.loot;
 
+import no.nav.opptjening.loot.client.inntektskatt.InntektSKD;
 import no.nav.opptjening.schema.PensjonsgivendeInntekt;
-import no.nav.popp.tjenester.inntektskatt.v1.informasjon.InntektSkatt;
+
 
 public class PensjonsgivendeInntektMapper {
 
-    public InntektSkatt mapToInntektSkatt(PensjonsgivendeInntekt pensjonsgivendeInntekt) {
+    public InntektSKD mapToInntektSkatt(PensjonsgivendeInntekt pensjonsgivendeInntekt) {
         if (pensjonsgivendeInntekt == null) {
             return null;
         }
 
-        InntektSkatt inntektSkatt = new InntektSkatt();
+        InntektSKD inntektSKD = new InntektSKD();
 
-        inntektSkatt.setPersoninntektFiskeFangstFamilieBarnehage(pensjonsgivendeInntekt.getFastlandsinntekt()
+        inntektSKD.setPersoninntektFiskeFangstFamilieBarnehage(pensjonsgivendeInntekt.getFastlandsinntekt()
                 .getPersoninntektFiskeFangstFamiliebarnehage());
-        inntektSkatt.setPersoninntektLoenn(pensjonsgivendeInntekt.getFastlandsinntekt()
+        inntektSKD.setPersoninntektLoenn(pensjonsgivendeInntekt.getFastlandsinntekt()
                 .getPersoninntektLoenn());
-        inntektSkatt.setPersoninntektNaering(pensjonsgivendeInntekt.getFastlandsinntekt()
+        inntektSKD.setPersoninntektNaering(pensjonsgivendeInntekt.getFastlandsinntekt()
                 .getPersoninntektNaering());
-        inntektSkatt.setPersoninntektBarePensjonsdel(pensjonsgivendeInntekt.getFastlandsinntekt()
+        inntektSKD.setPersoninntektBarePensjonsdel(pensjonsgivendeInntekt.getFastlandsinntekt()
                 .getPersoninntektBarePensjonsdel());
 
-        inntektSkatt.setSvalbardLoennLoennstrekkordningen(pensjonsgivendeInntekt.getSvalbardinntekt()
+        inntektSKD.setSvalbardLoennLoennstrekkordningen(pensjonsgivendeInntekt.getSvalbardinntekt()
                 .getSvalbardLoennLoennstrekkordningen());
-        inntektSkatt.setSvalbardPersoninntektNaering(pensjonsgivendeInntekt.getSvalbardinntekt()
+        inntektSKD.setSvalbardPersoninntektNaering(pensjonsgivendeInntekt.getSvalbardinntekt()
                 .getSvalbardPersoninntektNaering());
 
-        return inntektSkatt;
+        return inntektSKD;
     }
 }

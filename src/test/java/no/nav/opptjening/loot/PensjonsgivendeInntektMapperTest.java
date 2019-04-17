@@ -1,15 +1,16 @@
 package no.nav.opptjening.loot;
 
-import no.nav.opptjening.schema.Fastlandsinntekt;
-import no.nav.opptjening.schema.PensjonsgivendeInntekt;
-import no.nav.opptjening.schema.Svalbardinntekt;
-import no.nav.popp.tjenester.inntektskatt.v1.informasjon.InntektSkatt;
-import org.junit.Test;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 
 import java.net.URI;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
+import org.junit.Test;
+
+import no.nav.opptjening.loot.client.inntektskatt.InntektSKD;
+import no.nav.opptjening.schema.Fastlandsinntekt;
+import no.nav.opptjening.schema.PensjonsgivendeInntekt;
+import no.nav.opptjening.schema.Svalbardinntekt;
 
 public class PensjonsgivendeInntektMapperTest {
 
@@ -23,37 +24,37 @@ public class PensjonsgivendeInntektMapperTest {
 
     @Test
     public void mapToInntektSkattOk() {
-        Fastlandsinntekt fastlandsinntekt = new Fastlandsinntekt(1L,2L,3L,4L);
-        Svalbardinntekt svalbardinntekt = new Svalbardinntekt(5L,6L);
+        Fastlandsinntekt fastlandsinntekt = new Fastlandsinntekt(1L, 2L, 3L, 4L);
+        Svalbardinntekt svalbardinntekt = new Svalbardinntekt(5L, 6L);
         PensjonsgivendeInntekt pensjonsgivendeInntekt = new PensjonsgivendeInntekt("12345678901", "2018", fastlandsinntekt, svalbardinntekt);
-        InntektSkatt inntektSkatt = pensjonsgivendeInntektMapper.mapToInntektSkatt(pensjonsgivendeInntekt);
+        InntektSKD inntektSKD = pensjonsgivendeInntektMapper.mapToInntektSkatt(pensjonsgivendeInntekt);
 
-        assertEquals((Long) 1L, inntektSkatt.getPersoninntektLoenn());
-        assertEquals((Long) 2L, inntektSkatt.getPersoninntektFiskeFangstFamilieBarnehage());
-        assertEquals((Long) 3L, inntektSkatt.getPersoninntektNaering());
-        assertEquals((Long) 4L, inntektSkatt.getPersoninntektBarePensjonsdel());
-        assertEquals((Long) 5L, inntektSkatt.getSvalbardLoennLoennstrekkordningen());
-        assertEquals((Long) 6L, inntektSkatt.getSvalbardPersoninntektNaering());
+        assertEquals((Long) 1L, inntektSKD.getPersoninntektLoenn());
+        assertEquals((Long) 2L, inntektSKD.getPersoninntektFiskeFangstFamilieBarnehage());
+        assertEquals((Long) 3L, inntektSKD.getPersoninntektNaering());
+        assertEquals((Long) 4L, inntektSKD.getPersoninntektBarePensjonsdel());
+        assertEquals((Long) 5L, inntektSKD.getSvalbardLoennLoennstrekkordningen());
+        assertEquals((Long) 6L, inntektSKD.getSvalbardPersoninntektNaering());
     }
 
     @Test
     public void mapToInntektSkattWithNullValuesOk() {
-        Fastlandsinntekt fastlandsinntekt = new Fastlandsinntekt(null,2L,3L,4L);
-        Svalbardinntekt svalbardinntekt = new Svalbardinntekt(null,null);
+        Fastlandsinntekt fastlandsinntekt = new Fastlandsinntekt(null, 2L, 3L, 4L);
+        Svalbardinntekt svalbardinntekt = new Svalbardinntekt(null, null);
         PensjonsgivendeInntekt pensjonsgivendeInntekt = new PensjonsgivendeInntekt("12345678901", "2018", fastlandsinntekt, svalbardinntekt);
-        InntektSkatt inntektSkatt = pensjonsgivendeInntektMapper.mapToInntektSkatt(pensjonsgivendeInntekt);
+        InntektSKD inntektSKD = pensjonsgivendeInntektMapper.mapToInntektSkatt(pensjonsgivendeInntekt);
 
-        assertNull(inntektSkatt.getPersoninntektLoenn());
-        assertEquals((Long) 2L, inntektSkatt.getPersoninntektFiskeFangstFamilieBarnehage());
-        assertEquals((Long) 3L, inntektSkatt.getPersoninntektNaering());
-        assertEquals((Long) 4L, inntektSkatt.getPersoninntektBarePensjonsdel());
-        assertNull(inntektSkatt.getSvalbardLoennLoennstrekkordningen());
-        assertNull(inntektSkatt.getSvalbardPersoninntektNaering());
+        assertNull(inntektSKD.getPersoninntektLoenn());
+        assertEquals((Long) 2L, inntektSKD.getPersoninntektFiskeFangstFamilieBarnehage());
+        assertEquals((Long) 3L, inntektSKD.getPersoninntektNaering());
+        assertEquals((Long) 4L, inntektSKD.getPersoninntektBarePensjonsdel());
+        assertNull(inntektSKD.getSvalbardLoennLoennstrekkordningen());
+        assertNull(inntektSKD.getSvalbardPersoninntektNaering());
     }
 
     @Test
     public void mapToInntektSkattAsNullOk() {
-        InntektSkatt inntektSkatt = pensjonsgivendeInntektMapper.mapToInntektSkatt(null);
-        assertNull(inntektSkatt);
+        InntektSKD inntektSKD = pensjonsgivendeInntektMapper.mapToInntektSkatt(null);
+        assertNull(inntektSKD);
     }
 }

@@ -1,17 +1,16 @@
 package no.nav.opptjening.loot;
 
-
-import no.nav.popp.tjenester.inntektskatt.v1.informasjon.InntektSkatt;
-import no.nav.popp.tjenester.inntektskatt.v1.meldinger.LagreBeregnetSkattRequest;
+import no.nav.opptjening.loot.client.inntektskatt.InntektSKD;
+import no.nav.opptjening.loot.client.inntektskatt.LagreBeregnetSkattRequest;
 
 public class PensjonsgivendeInntektRecordMapper {
 
-    public LagreBeregnetSkattRequest mapToLagreBeregnetSkattRequest(String inntektsaar, String personident, InntektSkatt inntektSkatt) {
+    public LagreBeregnetSkattRequest mapToLagreBeregnetSkattRequest(String inntektsaar, String personident, InntektSKD inntektSKD) {
         LagreBeregnetSkattRequest lagreBeregnetSkattRequest = new LagreBeregnetSkattRequest();
 
         lagreBeregnetSkattRequest.setPersonIdent(personident);
         lagreBeregnetSkattRequest.setInntektsaar(inntektsaar);
-        lagreBeregnetSkattRequest.setInntektSkatt(inntektSkatt);
+        lagreBeregnetSkattRequest.setInntektSKD(inntektSKD);
 
         return lagreBeregnetSkattRequest;
     }
