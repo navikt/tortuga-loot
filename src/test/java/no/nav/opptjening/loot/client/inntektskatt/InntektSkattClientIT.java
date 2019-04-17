@@ -19,8 +19,8 @@ public class InntektSkattClientIT {
 
     @ClassRule
     public static WireMockRule wireMockRule = new WireMockRule();
-    private static final String STSEndpoint = "/SecurityTokenServiceProvider";
-    private static final String InntektSkattEndpoint = "/popp-ws/InntektSkatt_v1";
+    private static final String STSTokenEndpoint = "/rest/v1/sts/token";
+    private static final String InntektSkattEndpoint = "/popp-ws/api/lagre-inntekt-skd";
 
     private InntektSkattClient inntektSkattClient;
     private TokenClient tokenClient;
@@ -30,7 +30,7 @@ public class InntektSkattClientIT {
     @Before
     public void setUp() throws URISyntaxException {
         Map<String, String> env = new HashMap<>();
-        env.put("STS_URL", "http://localhost:" + wireMockRule.port() + STSEndpoint);
+        env.put("STS_URL", "http://localhost:" + wireMockRule.port());
         env.put("STS_CLIENT_USERNAME", "testusername");
         env.put("STS_CLIENT_PASSWORD", "testpassword");
         env.put("INNTEKT_SKATT_URL", "http://localhost:" + wireMockRule.port() + InntektSkattEndpoint);
@@ -41,7 +41,7 @@ public class InntektSkattClientIT {
 
     @Test
     public void lagreBeregnetSkatt() {
-        WireMock.stubFor(WireMock.get(WireMock.urlPathEqualTo(STSEndpoint))
+        WireMock.stubFor(WireMock.get(WireMock.urlPathEqualTo(STSTokenEndpoint))
                 .withQueryParam("grant_type", WireMock.matching("client_credentials"))
                 .withQueryParam("scope", WireMock.matching("openid"))
                 .willReturn(WireMock.okJson("{\"access_token\":\"eyJ4vaea3\",\"expires_in\":\"3600\",\"token_type\":\"Bearer\"}")));
@@ -74,7 +74,7 @@ public class InntektSkattClientIT {
 
     @Test
     public void lagreBeregnetSkattWithNullValue() {
-        WireMock.stubFor(WireMock.get(WireMock.urlPathEqualTo(STSEndpoint))
+        WireMock.stubFor(WireMock.get(WireMock.urlPathEqualTo(STSTokenEndpoint))
                 .withQueryParam("grant_type", WireMock.matching("client_credentials"))
                 .withQueryParam("scope", WireMock.matching("openid"))
                 .willReturn(WireMock.okJson("{\"access_token\":\"eyJ4vaea3\",\"expires_in\":\"3600\",\"token_type\":\"Bearer\"}")));

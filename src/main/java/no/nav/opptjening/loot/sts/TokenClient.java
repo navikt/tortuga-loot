@@ -43,8 +43,8 @@ public class TokenClient {
     }
 
     private Token getTokenFromProvider() {
-        LOG.debug("Getting new access-token for user: {} from: {}", stsProperties.getUsername(), stsProperties.getUrl());
-        Response response = this.restClient.target(stsProperties.getUrl())
+        LOG.debug("Getting new access-token for user: {} from: {}", stsProperties.getUsername(), getTokenUrl());
+        Response response = this.restClient.target(getTokenUrl())
                 .queryParam("grant_type", "client_credentials")
                 .queryParam("scope", "openid")
                 .request(MediaType.APPLICATION_JSON)
@@ -58,7 +58,7 @@ public class TokenClient {
         Validate.isTrue(response.getStatus() == HttpStatus.OK_200);
         try {
             accessToken = new ObjectMapper().readValue(response.readEntity(String.class), TokenImpl.class);
-            LOG.debug("Successfully retrieved access-token for user: {} from: {}", stsProperties.getUsername(), stsProperties.getUrl());
+            LOG.debug("Successfully retrieved access-token for user: {} from: {}", stsProperties.getUsername(), getTokenUrl());
             return accessToken;
         } catch (IOException e) {
             throw new RuntimeException("Exception while extracting token" + e.getMessage(), e);
@@ -71,5 +71,9 @@ public class TokenClient {
                 .connectTimeout(Long.parseLong(restClientProperties.getConnectionTimeout()), TimeUnit.MILLISECONDS)
                 .readTimeout(Long.parseLong(restClientProperties.getReadTimeout()), TimeUnit.MILLISECONDS)
                 .build();
+    }
+
+    private String getTokenUrl() {
+        return stsProperties.getUrl() + "/rest/v1/sts/token";
     }
 }

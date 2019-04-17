@@ -38,8 +38,8 @@ public class PensjonsgivendeInntektToInntektSkattIT {
 
     private KafkaEnvironment kafkaEnvironment;
     private final List<String> topics = Collections.singletonList(KafkaConfiguration.PENSJONSGIVENDE_INNTEKT_TOPIC);
-    private static final String STSEndpoint = "/SecurityTokenServiceProvider";
-    private static final String InntektSkattEndpoint = "/popp-ws/InntektSkatt_v1";
+    private static final String STSTokenEndpoint = "/rest/v1/sts/token";
+    private static final String InntektSkattEndpoint = "/popp-ws/api/lagre-inntekt-skd";
 
     @Rule
     public WireMockRule wireMockRule = new WireMockRule();
@@ -70,7 +70,7 @@ public class PensjonsgivendeInntektToInntektSkattIT {
         config.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
 
         Map<String, String> env = new HashMap<>();
-        env.put("STS_URL", "http://localhost:" + wireMockRule.port() + STSEndpoint);
+        env.put("STS_URL", "http://localhost:" + wireMockRule.port());
         env.put("STS_CLIENT_USERNAME", "testusername");
         env.put("STS_CLIENT_PASSWORD", "testpassword");
         env.put("INNTEKT_SKATT_URL", "http://localhost:" + wireMockRule.port() + InntektSkattEndpoint);
@@ -198,7 +198,7 @@ public class PensjonsgivendeInntektToInntektSkattIT {
     }
 
     private void createMockApi() {
-        WireMock.stubFor(WireMock.get(WireMock.urlPathEqualTo(STSEndpoint))
+        WireMock.stubFor(WireMock.get(WireMock.urlPathEqualTo(STSTokenEndpoint))
                 .withQueryParam("grant_type", WireMock.matching("client_credentials"))
                 .withQueryParam("scope", WireMock.matching("openid"))
                 .willReturn(WireMock.okJson("{\"access_token\":\"eyJ4vaea3\",\"expires_in\":\"3600\",\"token_type\":\"Bearer\"}")));

@@ -28,8 +28,8 @@ public class RestClientPropertiesTest {
 
     @Test
     public void createFromEnvironmetWithValuesFromEnv() {
-        env.put("TOKEN_CLIENT_CONNECTION_TIMEOUT", "9000");
-        env.put("TOKEN_CLIENT_READ_TIMEOUT", "9000");
+        env.put("REST_CLIENT_CONNECTION_TIMEOUT", "9000");
+        env.put("REST_CLIENT_READ_TIMEOUT", "9000");
         RestClientProperties restClientProperties = RestClientProperties.createFromEnvironment(env);
         assertEquals(restClientProperties.getConnectionTimeout(), "9000");
         assertEquals(restClientProperties.getReadTimeout(), "9000");

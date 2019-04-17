@@ -22,8 +22,8 @@ public class RestClientProperties {
     @NotNull
     public static RestClientProperties createFromEnvironment(@NotNull Map<String, String> env) {
         return new RestClientProperties(
-                env.getOrDefault("TOKEN_CLIENT_CONNECTION_TIMEOUT", defaultConnectionTimeout),
-                env.getOrDefault("TOKEN_CLIENT_READ_TIMEOUT", defaultReadTimeout));
+                env.getOrDefault("REST_CLIENT_CONNECTION_TIMEOUT", defaultConnectionTimeout),
+                env.getOrDefault("REST_CLIENT_READ_TIMEOUT", defaultReadTimeout));
     }
 
     @NotNull
