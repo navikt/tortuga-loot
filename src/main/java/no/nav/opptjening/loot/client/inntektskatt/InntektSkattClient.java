@@ -1,20 +1,18 @@
 package no.nav.opptjening.loot.client.inntektskatt;
 
-import io.prometheus.client.Counter;
-import no.nav.opptjening.loot.client.EndpointSTSClientConfig;
-import no.nav.opptjening.loot.client.WsClientBuilder;
-import no.nav.opptjening.loot.sts.STSClientBuilder;
-import no.nav.opptjening.loot.sts.STSProperties;
-import no.nav.popp.tjenester.inntektskatt.v1.InntektSkattV1;
-import no.nav.popp.tjenester.inntektskatt.v1.LagreBeregnetSkattSikkerhetsbegrensning;
-import no.nav.popp.tjenester.inntektskatt.v1.LagreBeregnetSkattUgyldigInput;
-import no.nav.popp.tjenester.inntektskatt.v1.meldinger.LagreBeregnetSkattRequest;
-import org.apache.cxf.jaxws.JaxWsProxyFactoryBean;
-import org.apache.cxf.ws.security.trust.STSClient;
-import org.jetbrains.annotations.NotNull;
-
 import java.net.URISyntaxException;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
+
+import javax.ws.rs.client.Client;
+import javax.ws.rs.client.ClientBuilder;
+import javax.ws.rs.client.Entity;
+import javax.ws.rs.core.MediaType;
+
+import io.prometheus.client.Counter;
+
+import no.nav.opptjening.loot.RestClientProperties;
+import no.nav.opptjening.loot.sts.Token;
 
 public class InntektSkattClient {
 
@@ -26,40 +24,29 @@ public class InntektSkattClient {
             .labelNames("year")
             .help("Antall beregnet skatt requester sendt til popp.").register();
 
-    private static InntektSkattV1 port;
+    private Client restClient;
+    private InntektSkattProperties inntektSkattEndpointUrl;
 
-    public InntektSkattClient(InntektSkattV1 port) {
-        this.port = port;
+    public InntektSkattClient(Map<String, String> env) throws URISyntaxException {
+        this.inntektSkattEndpointUrl = InntektSkattProperties.createFromEnvironment(env);
+        this.restClient = createRestClient(env);
     }
 
-    @NotNull
-    public static InntektSkattClient createFromEnvironment(Map<String, String> env) throws URISyntaxException {
-        return createFromEnvironment(env, EndpointSTSClientConfig.STS_SAML_POLICY);
-    }
+    public void lagreBeregnetSkatt(LagreBeregnetSkattRequest lagreBeregnetSkattRequest, Token accessToken) {
+        restClient.target(inntektSkattEndpointUrl.getUrl())
+                .request(MediaType.APPLICATION_JSON)
+                .header("Authorization", accessToken.getTokenType() + " " + accessToken.getAccessToken())
+                .post(Entity.json(lagreBeregnetSkattRequest));
 
-    @NotNull
-    public static InntektSkattClient createFromEnvironment(Map<String, String> env, String policyUri) throws URISyntaxException {
-        WsClientBuilder wsClientBuilder = new WsClientBuilder(JaxWsProxyFactoryBean::new);
-        STSClientBuilder stsClientBuilder = new STSClientBuilder();
-
-        InntektSkattProperties inntektSkattProperties = InntektSkattProperties.createFromEnvironment(env);
-        InntektSkattV1 inntektSkattV1 = wsClientBuilder.createPort(inntektSkattProperties.getUrl().toString(), InntektSkattV1.class);
-
-        STSProperties stsProperties = STSProperties.createFromEnvironment(env);
-        STSClient stsClient = stsClientBuilder.build(stsProperties);
-
-        EndpointSTSClientConfig endpointSTSClientConfig = new EndpointSTSClientConfig(stsClient);
-
-        inntektSkattV1 = endpointSTSClientConfig.configureRequestSamlToken(inntektSkattV1, policyUri);
-
-        return new InntektSkattClient(inntektSkattV1);
-    }
-
-    public void lagreBeregnetSkatt(LagreBeregnetSkattRequest lagreBeregnetSkattRequest)
-            throws LagreBeregnetSkattSikkerhetsbegrensning,
-                   LagreBeregnetSkattUgyldigInput {
-        port.lagreBeregnetSkatt(lagreBeregnetSkattRequest);
         lagreBeregnetSkattRequestsSentTotalCounter.inc();
         lagreBeregnetSkattRequestsSentCounter.labels(lagreBeregnetSkattRequest.getInntektsaar()).inc();
+    }
+
+    private static Client createRestClient(Map<String, String> env) {
+        RestClientProperties restClientProperties = RestClientProperties.createFromEnvironment(env);
+        return ClientBuilder.newBuilder()
+                .connectTimeout(Long.parseLong(restClientProperties.getConnectionTimeout()), TimeUnit.MILLISECONDS)
+                .readTimeout(Long.parseLong(restClientProperties.getReadTimeout()), TimeUnit.MILLISECONDS)
+                .build();
     }
 }

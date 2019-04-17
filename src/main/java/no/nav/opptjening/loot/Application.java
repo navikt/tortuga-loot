@@ -1,20 +1,21 @@
 package no.nav.opptjening.loot;
 
-import io.prometheus.client.Counter;
-import no.nav.opptjening.loot.client.inntektskatt.InntektSkattClient;
-import no.nav.opptjening.nais.NaisHttpServer;
-import no.nav.opptjening.schema.PensjonsgivendeInntekt;
-import no.nav.opptjening.schema.skatt.hendelsesliste.HendelseKey;
-import no.nav.popp.tjenester.inntektskatt.v1.LagreBeregnetSkattSikkerhetsbegrensning;
-import no.nav.popp.tjenester.inntektskatt.v1.LagreBeregnetSkattUgyldigInput;
+import java.util.Map;
+import java.util.Properties;
+
 import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.kstream.KStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Map;
-import java.util.Properties;
+import io.prometheus.client.Counter;
+
+import no.nav.opptjening.loot.client.inntektskatt.InntektSkattClient;
+import no.nav.opptjening.loot.sts.TokenClient;
+import no.nav.opptjening.nais.NaisHttpServer;
+import no.nav.opptjening.schema.PensjonsgivendeInntekt;
+import no.nav.opptjening.schema.skatt.hendelsesliste.HendelseKey;
 
 public class Application {
 
@@ -25,6 +26,8 @@ public class Application {
     private final KafkaStreams streams;
 
     private final NaisHttpServer naisHttpServer;
+
+    private final TokenClient tokenClient;
 
     private volatile boolean shutdown = false;
 
@@ -50,9 +53,10 @@ public class Application {
 
             KafkaConfiguration kafkaConfiguration = new KafkaConfiguration(env);
 
-            InntektSkattClient inntektSkattClient = InntektSkattClient.createFromEnvironment(env);
+            InntektSkattClient inntektSkattClient = new InntektSkattClient(env);
+            TokenClient tokenClient = new TokenClient(env);
 
-            app = new Application(kafkaConfiguration.streamsConfiguration(), inntektSkattClient);
+            app = new Application(kafkaConfiguration.streamsConfiguration(), inntektSkattClient, tokenClient);
             app.startHttpServer();
             app.run();
         } catch (Throwable e) {
@@ -61,9 +65,9 @@ public class Application {
         }
     }
 
-    public Application(Properties streamsProperties,
-                       InntektSkattClient inntektSkattClient) {
+    public Application(Properties streamsProperties, InntektSkattClient inntektSkattClient, TokenClient tokenClient) {
         this.inntektSkattClient = inntektSkattClient;
+        this.tokenClient = tokenClient;
 
         StreamsBuilder builder = new StreamsBuilder();
 
@@ -75,7 +79,7 @@ public class Application {
             shutdown();
         });
 
-        naisHttpServer = new NaisHttpServer(()->streams.state().isRunning(), ()->true);
+        naisHttpServer = new NaisHttpServer(() -> streams.state().isRunning(), () -> true);
 
         Runtime.getRuntime().addShutdownHook(new Thread(this::shutdown));
     }
@@ -89,22 +93,15 @@ public class Application {
                 .mapValues((readOnlyKey, value) -> pensjonsgivendeInntektRecordMapper.mapToLagreBeregnetSkattRequest(readOnlyKey.getGjelderPeriode(),
                         readOnlyKey.getIdentifikator(), value))
                 .foreach((key, value) -> {
-                    try {
-                        pensjonsgivendeInntekterProcessed.labels(value.getInntektsaar()).inc();
-                        pensjonsgivendeInntekterProcessedTotal.inc();
 
-                        LOG.debug("Saving record={} for key={}", value, key);
-                        if (dryRun) {
-                            LOG.info("Skipping because dryRun");
-                        } else {
-                            inntektSkattClient.lagreBeregnetSkatt(value);
-                        }
-                    } catch (LagreBeregnetSkattUgyldigInput e) {
-                        LOG.error("Ugyldig input til InntektSkatt.lagreBeregnetSkatt", e);
-                        throw new RuntimeException(e);
-                    } catch (LagreBeregnetSkattSikkerhetsbegrensning e) {
-                        LOG.error("LagreBeregnetSkattSikkerhetsbegrensning", e);
-                        throw new RuntimeException(e);
+                    pensjonsgivendeInntekterProcessed.labels(value.getInntektsaar()).inc();
+                    pensjonsgivendeInntekterProcessedTotal.inc();
+
+                    LOG.debug("Saving record={} for key={}", value, key);
+                    if (dryRun) {
+                        LOG.info("Skipping because dryRun");
+                    } else {
+                        inntektSkattClient.lagreBeregnetSkatt(value, tokenClient.getAccessToken());
                     }
                 });
     }
