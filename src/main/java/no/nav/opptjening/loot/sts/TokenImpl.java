@@ -18,6 +18,12 @@ public class TokenImpl implements Token {
     public TokenImpl() {
     }
 
+    public TokenImpl(String accessToken, Long expiresIn, String tokenType) {
+        this.accessToken = accessToken;
+        this.expiresIn = expiresIn;
+        this.tokenType = tokenType;
+    }
+
     @Override
     public String getAccessToken() {
         return accessToken;
