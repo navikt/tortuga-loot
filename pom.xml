@@ -101,6 +101,12 @@
             <version>2.28</version>
         </dependency>
 
+        <dependency>
+            <groupId>org.glassfish.jersey.inject</groupId>
+            <artifactId>jersey-hk2</artifactId>
+            <version>2.28</version>
+        </dependency>
+
         <!-- test -->
         <dependency>
             <groupId>junit</groupId>
