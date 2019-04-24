@@ -55,7 +55,7 @@ public class TokenClient {
 
     private Token extractToken(Response response) {
         Validate.notNull(response, "Response from token service is null");
-        Validate.isTrue(response.getStatus() == HttpStatus.OK_200);
+        Validate.isTrue(response.getStatus() == HttpStatus.OK_200, "Response-code was: " + response.getStatus() + ".");
         try {
             accessToken = new ObjectMapper().readValue(response.readEntity(String.class), TokenImpl.class);
             LOG.debug("Successfully retrieved access-token for user: {} from: {}", stsProperties.getUsername(), getTokenUrl());
