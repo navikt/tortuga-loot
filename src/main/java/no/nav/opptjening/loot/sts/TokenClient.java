@@ -48,7 +48,7 @@ public class TokenClient {
                 .queryParam("grant_type", "client_credentials")
                 .queryParam("scope", "openid")
                 .request(MediaType.APPLICATION_JSON)
-                .header("Authorization", "Basic" + Base64.getEncoder().encodeToString((stsProperties.getUsername() + ":" + stsProperties.getPassword()).getBytes()))
+                .header("Authorization", "Basic " + Base64.getEncoder().encodeToString((stsProperties.getUsername() + ":" + stsProperties.getPassword()).getBytes()))
                 .get();
         return extractToken(response);
     }
