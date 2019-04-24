@@ -34,4 +34,4 @@ fasitResources:
     - alias: "popp:lagre-inntekt-skd"
       resourceType: restservice
       propertyMap:
-        endpointUrl: INNTEKT_SKATT_URL
+        url: INNTEKT_SKATT_URL
