@@ -1,11 +1,12 @@
 package no.nav.opptjening.loot;
 
-import no.nav.popp.tjenester.inntektskatt.v1.informasjon.InntektSkatt;
-import no.nav.popp.tjenester.inntektskatt.v1.meldinger.LagreBeregnetSkattRequest;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
+
+import no.nav.opptjening.loot.client.inntektskatt.InntektSKD;
+import no.nav.opptjening.loot.client.inntektskatt.LagreBeregnetSkattRequest;
 
 public class PensjonsgivendeInntektRecordMapperTest {
 
@@ -13,82 +14,82 @@ public class PensjonsgivendeInntektRecordMapperTest {
 
     @Test
     public void mapToBeregnetSkattRequestWithInntektSkattOk() {
-        InntektSkatt inntektSkatt = new InntektSkatt();
-        inntektSkatt.setPersoninntektFiskeFangstFamilieBarnehage(9000L);
-        inntektSkatt.setPersoninntektLoenn(8000L);
-        inntektSkatt.setPersoninntektNaering(7000L);
-        inntektSkatt.setPersoninntektBarePensjonsdel(6000L);
-        inntektSkatt.setSvalbardLoennLoennstrekkordningen(5000L);
-        inntektSkatt.setSvalbardPersoninntektNaering(4000L);
+        InntektSKD inntektSKD = new InntektSKD();
+        inntektSKD.setPersoninntektFiskeFangstFamilieBarnehage(9000L);
+        inntektSKD.setPersoninntektLoenn(8000L);
+        inntektSKD.setPersoninntektNaering(7000L);
+        inntektSKD.setPersoninntektBarePensjonsdel(6000L);
+        inntektSKD.setSvalbardLoennLoennstrekkordningen(5000L);
+        inntektSKD.setSvalbardPersoninntektNaering(4000L);
 
         LagreBeregnetSkattRequest lagreBeregnetSkattRequest = pensjonsgivendeInntektRecordMapper
-                .mapToLagreBeregnetSkattRequest("2017", "12345678901", inntektSkatt);
+                .mapToLagreBeregnetSkattRequest("2017", "12345678901", inntektSKD);
 
         assertEquals("2017", lagreBeregnetSkattRequest.getInntektsaar());
         assertEquals("12345678901", lagreBeregnetSkattRequest.getPersonIdent());
-        assertEquals((Long) 9000L, lagreBeregnetSkattRequest.getInntektSkatt().getPersoninntektFiskeFangstFamilieBarnehage());
-        assertEquals((Long) 8000L, lagreBeregnetSkattRequest.getInntektSkatt().getPersoninntektLoenn());
-        assertEquals((Long) 7000L, lagreBeregnetSkattRequest.getInntektSkatt().getPersoninntektNaering());
-        assertEquals((Long) 6000L, lagreBeregnetSkattRequest.getInntektSkatt().getPersoninntektBarePensjonsdel());
-        assertEquals((Long) 5000L, lagreBeregnetSkattRequest.getInntektSkatt().getSvalbardLoennLoennstrekkordningen());
-        assertEquals((Long) 4000L, lagreBeregnetSkattRequest.getInntektSkatt().getSvalbardPersoninntektNaering());
+        assertEquals((Long) 9000L, lagreBeregnetSkattRequest.getInntektSKD().getPersoninntektFiskeFangstFamilieBarnehage());
+        assertEquals((Long) 8000L, lagreBeregnetSkattRequest.getInntektSKD().getPersoninntektLoenn());
+        assertEquals((Long) 7000L, lagreBeregnetSkattRequest.getInntektSKD().getPersoninntektNaering());
+        assertEquals((Long) 6000L, lagreBeregnetSkattRequest.getInntektSKD().getPersoninntektBarePensjonsdel());
+        assertEquals((Long) 5000L, lagreBeregnetSkattRequest.getInntektSKD().getSvalbardLoennLoennstrekkordningen());
+        assertEquals((Long) 4000L, lagreBeregnetSkattRequest.getInntektSKD().getSvalbardPersoninntektNaering());
     }
 
     @Test
     public void mapToBeregnetSkattRequestWithInntektSkattWithNullValuesOk() {
-        InntektSkatt inntektSkatt = new InntektSkatt();
-        inntektSkatt.setPersoninntektFiskeFangstFamilieBarnehage(9000L);
-        inntektSkatt.setPersoninntektLoenn(null);
-        inntektSkatt.setPersoninntektNaering(7000L);
-        inntektSkatt.setPersoninntektBarePensjonsdel(null);
-        inntektSkatt.setSvalbardLoennLoennstrekkordningen(null);
-        inntektSkatt.setSvalbardPersoninntektNaering(4000L);
+        InntektSKD inntektSKD = new InntektSKD();
+        inntektSKD.setPersoninntektFiskeFangstFamilieBarnehage(9000L);
+        inntektSKD.setPersoninntektLoenn(null);
+        inntektSKD.setPersoninntektNaering(7000L);
+        inntektSKD.setPersoninntektBarePensjonsdel(null);
+        inntektSKD.setSvalbardLoennLoennstrekkordningen(null);
+        inntektSKD.setSvalbardPersoninntektNaering(4000L);
 
         LagreBeregnetSkattRequest lagreBeregnetSkattRequest = pensjonsgivendeInntektRecordMapper.
-                mapToLagreBeregnetSkattRequest("2017", "12345678902", inntektSkatt);
+                mapToLagreBeregnetSkattRequest("2017", "12345678902", inntektSKD);
 
         assertEquals("2017", lagreBeregnetSkattRequest.getInntektsaar());
         assertEquals("12345678902", lagreBeregnetSkattRequest.getPersonIdent());
-        assertEquals((Long) 9000L, lagreBeregnetSkattRequest.getInntektSkatt().getPersoninntektFiskeFangstFamilieBarnehage());
-        assertNull(lagreBeregnetSkattRequest.getInntektSkatt().getPersoninntektLoenn());
-        assertEquals((Long) 7000L, lagreBeregnetSkattRequest.getInntektSkatt().getPersoninntektNaering());
-        assertNull(lagreBeregnetSkattRequest.getInntektSkatt().getPersoninntektBarePensjonsdel());
-        assertNull(lagreBeregnetSkattRequest.getInntektSkatt().getSvalbardLoennLoennstrekkordningen());
-        assertEquals((Long) 4000L, lagreBeregnetSkattRequest.getInntektSkatt().getSvalbardPersoninntektNaering());
+        assertEquals((Long) 9000L, lagreBeregnetSkattRequest.getInntektSKD().getPersoninntektFiskeFangstFamilieBarnehage());
+        assertNull(lagreBeregnetSkattRequest.getInntektSKD().getPersoninntektLoenn());
+        assertEquals((Long) 7000L, lagreBeregnetSkattRequest.getInntektSKD().getPersoninntektNaering());
+        assertNull(lagreBeregnetSkattRequest.getInntektSKD().getPersoninntektBarePensjonsdel());
+        assertNull(lagreBeregnetSkattRequest.getInntektSKD().getSvalbardLoennLoennstrekkordningen());
+        assertEquals((Long) 4000L, lagreBeregnetSkattRequest.getInntektSKD().getSvalbardPersoninntektNaering());
     }
 
     @Test
     public void mapToBeregnetSkattRequestWithInntektSkattWithOnlyNullValuesOk() {
-        InntektSkatt inntektSkatt = new InntektSkatt();
-        inntektSkatt.setPersoninntektFiskeFangstFamilieBarnehage(null);
-        inntektSkatt.setPersoninntektLoenn(null);
-        inntektSkatt.setPersoninntektNaering(null);
-        inntektSkatt.setPersoninntektBarePensjonsdel(null);
-        inntektSkatt.setSvalbardLoennLoennstrekkordningen(null);
-        inntektSkatt.setSvalbardPersoninntektNaering(null);
+        InntektSKD inntektSKD = new InntektSKD();
+        inntektSKD.setPersoninntektFiskeFangstFamilieBarnehage(null);
+        inntektSKD.setPersoninntektLoenn(null);
+        inntektSKD.setPersoninntektNaering(null);
+        inntektSKD.setPersoninntektBarePensjonsdel(null);
+        inntektSKD.setSvalbardLoennLoennstrekkordningen(null);
+        inntektSKD.setSvalbardPersoninntektNaering(null);
 
         LagreBeregnetSkattRequest lagreBeregnetSkattRequest = pensjonsgivendeInntektRecordMapper
-                .mapToLagreBeregnetSkattRequest("2017", "12345678902", inntektSkatt);
+                .mapToLagreBeregnetSkattRequest("2017", "12345678902", inntektSKD);
 
         assertEquals("2017", lagreBeregnetSkattRequest.getInntektsaar());
         assertEquals("12345678902", lagreBeregnetSkattRequest.getPersonIdent());
-        assertNull(lagreBeregnetSkattRequest.getInntektSkatt().getPersoninntektFiskeFangstFamilieBarnehage());
-        assertNull(lagreBeregnetSkattRequest.getInntektSkatt().getPersoninntektLoenn());
-        assertNull(lagreBeregnetSkattRequest.getInntektSkatt().getPersoninntektNaering());
-        assertNull(lagreBeregnetSkattRequest.getInntektSkatt().getPersoninntektBarePensjonsdel());
-        assertNull(lagreBeregnetSkattRequest.getInntektSkatt().getSvalbardLoennLoennstrekkordningen());
-        assertNull(lagreBeregnetSkattRequest.getInntektSkatt().getSvalbardPersoninntektNaering());
+        assertNull(lagreBeregnetSkattRequest.getInntektSKD().getPersoninntektFiskeFangstFamilieBarnehage());
+        assertNull(lagreBeregnetSkattRequest.getInntektSKD().getPersoninntektLoenn());
+        assertNull(lagreBeregnetSkattRequest.getInntektSKD().getPersoninntektNaering());
+        assertNull(lagreBeregnetSkattRequest.getInntektSKD().getPersoninntektBarePensjonsdel());
+        assertNull(lagreBeregnetSkattRequest.getInntektSKD().getSvalbardLoennLoennstrekkordningen());
+        assertNull(lagreBeregnetSkattRequest.getInntektSKD().getSvalbardPersoninntektNaering());
     }
 
     @Test
     public void mapToBeregnetSkattRequestWithInntektSkattNullOk() {
-        InntektSkatt inntektSkatt = null;
+        InntektSKD inntektSKD = null;
 
         LagreBeregnetSkattRequest lagreBeregnetSkattRequest = pensjonsgivendeInntektRecordMapper.
-                mapToLagreBeregnetSkattRequest("2017", "12345678902", inntektSkatt);
+                mapToLagreBeregnetSkattRequest("2017", "12345678902", inntektSKD);
 
         assertEquals("2017", lagreBeregnetSkattRequest.getInntektsaar());
         assertEquals("12345678902", lagreBeregnetSkattRequest.getPersonIdent());
-        assertNull(lagreBeregnetSkattRequest.getInntektSkatt());
+        assertNull(lagreBeregnetSkattRequest.getInntektSKD());
     }
 }

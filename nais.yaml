@@ -27,11 +27,11 @@ fasitResources:
         password: STS_CLIENT_PASSWORD
     - alias: tortuga-loot-properties
       resourceType: applicationproperties
-    - alias: securityTokenService
+    - alias: security-token-service-issuer
       resourceType: baseurl
       propertyMap:
         url: STS_URL
-    - alias: "popp:Inntektskatt_v1"
-      resourceType: soapservice
+    - alias: "popp:lagre-inntekt-skd"
+      resourceType: restservice
       propertyMap:
         endpointUrl: INNTEKT_SKATT_URL
