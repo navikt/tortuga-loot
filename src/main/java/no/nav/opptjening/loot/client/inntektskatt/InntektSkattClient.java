@@ -1,13 +1,17 @@
 package no.nav.opptjening.loot.client.inntektskatt;
 
+import java.io.IOException;
 import java.net.URISyntaxException;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.time.Duration;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
 
-import javax.ws.rs.client.Client;
-import javax.ws.rs.client.ClientBuilder;
-import javax.ws.rs.client.Entity;
-import javax.ws.rs.core.MediaType;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+
+import org.jetbrains.annotations.NotNull;
 
 import io.prometheus.client.Counter;
 
@@ -24,29 +28,37 @@ public class InntektSkattClient {
             .labelNames("year")
             .help("Antall beregnet skatt requester sendt til popp.").register();
 
-    private Client restClient;
+    private HttpClient httpClient;
     private InntektSkattProperties inntektSkattEndpointUrl;
+    private static Gson gson = new GsonBuilder().setPrettyPrinting().create();
 
     public InntektSkattClient(Map<String, String> env) throws URISyntaxException {
         this.inntektSkattEndpointUrl = InntektSkattProperties.createFromEnvironment(env);
-        this.restClient = createRestClient(env);
+        this.httpClient = createHttpClient(env);
     }
 
     public void lagreBeregnetSkatt(LagreBeregnetSkattRequest lagreBeregnetSkattRequest, Token accessToken) {
-        restClient.target(inntektSkattEndpointUrl.getUrl())
-                .request(MediaType.APPLICATION_JSON)
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(inntektSkattEndpointUrl.getUrl())
                 .header("Authorization", accessToken.getTokenType() + " " + accessToken.getAccessToken())
-                .post(Entity.json(lagreBeregnetSkattRequest));
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(gson.toJson(lagreBeregnetSkattRequest)))
+                .build();
+
+        try {
+            httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+        } catch (IOException | InterruptedException e) {
+            throw new RuntimeException("Exception while invoking endpoint: " + inntektSkattEndpointUrl.getUrl().toString() + ": " + e.getMessage(), e);
+        }
 
         lagreBeregnetSkattRequestsSentTotalCounter.inc();
         lagreBeregnetSkattRequestsSentCounter.labels(lagreBeregnetSkattRequest.getInntektsaar()).inc();
     }
 
-    private static Client createRestClient(Map<String, String> env) {
+    private HttpClient createHttpClient(@NotNull Map<String, String> env) {
         RestClientProperties restClientProperties = RestClientProperties.createFromEnvironment(env);
-        return ClientBuilder.newBuilder()
-                .connectTimeout(Long.parseLong(restClientProperties.getConnectionTimeout()), TimeUnit.MILLISECONDS)
-                .readTimeout(Long.parseLong(restClientProperties.getReadTimeout()), TimeUnit.MILLISECONDS)
+        return HttpClient.newBuilder()
+                .connectTimeout(Duration.ofMillis(Long.parseLong(restClientProperties.getConnectionTimeout())))
                 .build();
     }
 }

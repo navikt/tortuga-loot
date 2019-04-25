@@ -1,6 +1,7 @@
 package no.nav.opptjening.loot.client.inntektskatt;
 
 import java.net.URISyntaxException;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -44,6 +45,7 @@ public class InntektSkattClientIT {
         WireMock.stubFor(WireMock.get(WireMock.urlPathEqualTo(STSTokenEndpoint))
                 .withQueryParam("grant_type", WireMock.matching("client_credentials"))
                 .withQueryParam("scope", WireMock.matching("openid"))
+                .withHeader("Authorization", WireMock.matching("Basic " + Base64.getEncoder().encodeToString(("testusername" + ":" + "testpassword").getBytes())))
                 .willReturn(WireMock.okJson("{\"access_token\":\"eyJ4vaea3\",\"expires_in\":\"3600\",\"token_type\":\"Bearer\"}")));
 
         WireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo(InntektSkattEndpoint))
@@ -83,7 +85,6 @@ public class InntektSkattClientIT {
                 .withHeader("Authorization", WireMock.matching("Bearer " + "eyJ4vaea3"))
                 .withRequestBody(WireMock.matchingJsonPath("$.[?(@.personIdent == '01029804032')]"))
                 .withRequestBody(WireMock.matchingJsonPath("$.[?(@.inntektsaar == '2017')]"))
-                .withRequestBody(WireMock.matchingJsonPath("$.[?(@.inntektSKD == null)]"))
                 .willReturn(WireMock.okJson("{\"LagreBeregnetSkattResponse\":\"{}\"}"))
         );
 
