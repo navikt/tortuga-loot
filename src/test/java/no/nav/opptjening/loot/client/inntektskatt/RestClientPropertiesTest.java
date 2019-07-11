@@ -1,20 +1,19 @@
 package no.nav.opptjening.loot.client.inntektskatt;
 
-import static org.junit.Assert.assertEquals;
-
 import java.util.HashMap;
 import java.util.Map;
 
-import org.junit.Before;
-import org.junit.Test;
-
 import no.nav.opptjening.loot.RestClientProperties;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class RestClientPropertiesTest {
 
     private static Map<String, String> env = new HashMap<>();
 
-    @Before
+    @BeforeEach
     public void before(){
         env.clear();
     }

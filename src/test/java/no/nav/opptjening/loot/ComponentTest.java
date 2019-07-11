@@ -32,7 +32,7 @@ import no.nav.opptjening.schema.Svalbardinntekt;
 import no.nav.opptjening.schema.skatt.hendelsesliste.HendelseKey;
 import org.junit.jupiter.api.*;
 
-public class PensjonsgivendeInntektToInntektSkattIT {
+public class ComponentTest {
 
     private static final int NUMBER_OF_BROKERS = 2;
     private static final int WIREMOCK_SERVER_PORT = 8080;
@@ -43,10 +43,10 @@ public class PensjonsgivendeInntektToInntektSkattIT {
 
     private static WireMockServer wireMockServer = new WireMockRule(WIREMOCK_SERVER_PORT);
 
-    private final Properties streamsConfiguration = new Properties();
+    private static final Properties streamsConfiguration = new Properties();
 
     @BeforeAll
-    public void setUp() {
+    public static void setUp() {
         wireMockServer.start();
         kafkaEnvironment = new KafkaEnvironment(NUMBER_OF_BROKERS, TOPICS, Collections.emptyList(), true, false, Collections.emptyList(), false, new Properties());
         kafkaEnvironment.start();
@@ -56,7 +56,7 @@ public class PensjonsgivendeInntektToInntektSkattIT {
     }
 
     @AfterAll
-    public void tearDown() {
+    public static void tearDown() {
         kafkaEnvironment.tearDown();
     }
 

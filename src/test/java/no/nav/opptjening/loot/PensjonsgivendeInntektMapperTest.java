@@ -1,16 +1,16 @@
 package no.nav.opptjening.loot;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
 
 import java.net.URI;
-
-import org.junit.Test;
 
 import no.nav.opptjening.loot.client.inntektskatt.InntektSKD;
 import no.nav.opptjening.schema.Fastlandsinntekt;
 import no.nav.opptjening.schema.PensjonsgivendeInntekt;
 import no.nav.opptjening.schema.Svalbardinntekt;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 public class PensjonsgivendeInntektMapperTest {
 

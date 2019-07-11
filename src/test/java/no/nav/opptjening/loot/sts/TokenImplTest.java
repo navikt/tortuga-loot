@@ -1,22 +1,22 @@
 package no.nav.opptjening.loot.sts;
 
-import static org.hamcrest.core.Is.is;
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.Test;
 
-import org.junit.Test;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TokenImplTest {
 
     @Test
     public void validToken(){
         Token valid = new TokenImpl("token",3600L,"Bearer");
-        assertThat(valid.isExpired(), is(false));
+        assertFalse(valid.isExpired());
     }
 
     @Test
     public void expiredToken() throws InterruptedException {
         Token invalid = new TokenImpl("token",0L,"Bearer");
         Thread.sleep(1000);
-        assertThat(invalid.isExpired(), is(true));
+        assertTrue(invalid.isExpired());
     }
 }

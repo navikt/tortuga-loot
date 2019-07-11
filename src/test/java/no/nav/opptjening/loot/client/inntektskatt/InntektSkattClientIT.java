@@ -5,36 +5,32 @@ import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
 
+import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.client.WireMock;
-import com.github.tomakehurst.wiremock.junit.WireMockRule;
 
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import no.nav.opptjening.loot.sts.TokenClient;
 
 public class InntektSkattClientIT {
 
-    @ClassRule
-    public static WireMockRule wireMockRule = new WireMockRule();
+    public static final int WIREMOCK_SERVER_PORT = 8080;
+    private static WireMockServer wireMockServer = new WireMockServer(WIREMOCK_SERVER_PORT);
     private static final String STSTokenEndpoint = "/rest/v1/sts/token";
     private static final String InntektSkattEndpoint = "/popp-ws/api/lagre-inntekt-skd";
 
-    private InntektSkattClient inntektSkattClient;
-    private TokenClient tokenClient;
+    private static InntektSkattClient inntektSkattClient;
+    private static TokenClient tokenClient;
 
-    private static final Logger LOG = LoggerFactory.getLogger(InntektSkattClientIT.class);
-
-    @Before
-    public void setUp() throws URISyntaxException {
+    @BeforeAll
+    public static void setUp() throws URISyntaxException {
+        wireMockServer.start();
         Map<String, String> env = new HashMap<>();
-        env.put("STS_URL", "http://localhost:" + wireMockRule.port());
+        env.put("STS_URL", "http://localhost:" + wireMockServer.port());
         env.put("STS_CLIENT_USERNAME", "testusername");
         env.put("STS_CLIENT_PASSWORD", "testpassword");
-        env.put("INNTEKT_SKATT_URL", "http://localhost:" + wireMockRule.port() + InntektSkattEndpoint);
+        env.put("INNTEKT_SKATT_URL", "http://localhost:" + wireMockServer.port() + InntektSkattEndpoint);
 
         inntektSkattClient = new InntektSkattClient(env);
         tokenClient = new TokenClient(env);

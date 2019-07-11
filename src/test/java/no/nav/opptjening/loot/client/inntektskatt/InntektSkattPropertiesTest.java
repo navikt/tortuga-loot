@@ -1,27 +1,29 @@
 package no.nav.opptjening.loot.client.inntektskatt;
 
-import org.junit.Test;
+
+import org.junit.jupiter.api.Test;
 
 import java.net.URISyntaxException;
 import java.util.HashMap;
 import java.util.Map;
 
-import static org.junit.Assert.*;
+import static no.nav.opptjening.loot.client.inntektskatt.InntektSkattProperties.createFromEnvironment;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class InntektSkattPropertiesTest {
 
     private static Map<String, String> applicationEnvironment = new HashMap<>();
 
-    @Test(expected = MissingClientConfig.class)
+    @Test
     public void createFromEnvironment_throwsMissingClientConfig_when_INNTEKT_SKATT_URL_isNull() throws Exception {
         applicationEnvironment.put("INNTEKT_SKATT_URL", null);
-        InntektSkattProperties.createFromEnvironment(applicationEnvironment);
+        assertThrows(MissingClientConfig.class, () -> createFromEnvironment(applicationEnvironment));
     }
 
-    @Test(expected = URISyntaxException.class)
+    @Test
     public void createFromEnvironment_throwsURISyntaxException_when_INNTEKT_SKATT_URL_containsIllegalCharacters() throws Exception {
         String malformedUrl = "https://www.malformedUrl .com";
         applicationEnvironment.put("INNTEKT_SKATT_URL", malformedUrl);
-        InntektSkattProperties.createFromEnvironment(applicationEnvironment);
+        assertThrows(URISyntaxException.class, () -> createFromEnvironment(applicationEnvironment));
     }
 }
