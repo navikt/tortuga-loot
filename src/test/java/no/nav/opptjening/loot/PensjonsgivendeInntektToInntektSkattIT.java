@@ -36,8 +36,9 @@ import no.nav.opptjening.schema.skatt.hendelsesliste.HendelseKey;
 
 public class PensjonsgivendeInntektToInntektSkattIT {
 
+    private static final int NUMBER_OF_BROKERS = 2;
     private KafkaEnvironment kafkaEnvironment;
-    private final List<String> topics = Collections.singletonList(KafkaConfiguration.PENSJONSGIVENDE_INNTEKT_TOPIC);
+    private static final List<String> TOPICS = Collections.singletonList(KafkaConfiguration.PENSJONSGIVENDE_INNTEKT_TOPIC);
     private static final String STSTokenEndpoint = "/rest/v1/sts/token";
     private static final String InntektSkattEndpoint = "/popp-ws/api/lagre-inntekt-skd";
 
@@ -48,7 +49,7 @@ public class PensjonsgivendeInntektToInntektSkattIT {
 
     @Before
     public void setUp() {
-        kafkaEnvironment = new KafkaEnvironment(2, topics, true, false, Collections.emptyList(), false);
+        kafkaEnvironment = new KafkaEnvironment(NUMBER_OF_BROKERS, TOPICS, Collections.emptyList(), true, false, Collections.emptyList(), false, new Properties());
         kafkaEnvironment.start();
 
         streamsConfiguration.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, kafkaEnvironment.getBrokersURL());
