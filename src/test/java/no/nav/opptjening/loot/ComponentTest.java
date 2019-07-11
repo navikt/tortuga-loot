@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
+import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.client.WireMock;
 import com.github.tomakehurst.wiremock.junit.WireMockRule;
 
@@ -16,10 +17,6 @@ import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.streams.StreamsConfig;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
 
 import io.confluent.kafka.serializers.AbstractKafkaAvroSerDeConfig;
 import io.confluent.kafka.serializers.KafkaAvroSerializer;
@@ -33,22 +30,24 @@ import no.nav.opptjening.schema.Fastlandsinntekt;
 import no.nav.opptjening.schema.PensjonsgivendeInntekt;
 import no.nav.opptjening.schema.Svalbardinntekt;
 import no.nav.opptjening.schema.skatt.hendelsesliste.HendelseKey;
+import org.junit.jupiter.api.*;
 
 public class PensjonsgivendeInntektToInntektSkattIT {
 
     private static final int NUMBER_OF_BROKERS = 2;
-    private KafkaEnvironment kafkaEnvironment;
+    private static final int WIREMOCK_SERVER_PORT = 8080;
+    private static KafkaEnvironment kafkaEnvironment;
     private static final List<String> TOPICS = Collections.singletonList(KafkaConfiguration.PENSJONSGIVENDE_INNTEKT_TOPIC);
     private static final String STSTokenEndpoint = "/rest/v1/sts/token";
     private static final String InntektSkattEndpoint = "/popp-ws/api/lagre-inntekt-skd";
 
-    @Rule
-    public WireMockRule wireMockRule = new WireMockRule();
+    private static WireMockServer wireMockServer = new WireMockRule(WIREMOCK_SERVER_PORT);
 
     private final Properties streamsConfiguration = new Properties();
 
-    @Before
+    @BeforeAll
     public void setUp() {
+        wireMockServer.start();
         kafkaEnvironment = new KafkaEnvironment(NUMBER_OF_BROKERS, TOPICS, Collections.emptyList(), true, false, Collections.emptyList(), false, new Properties());
         kafkaEnvironment.start();
 
@@ -56,7 +55,7 @@ public class PensjonsgivendeInntektToInntektSkattIT {
         streamsConfiguration.put(AbstractKafkaAvroSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG, kafkaEnvironment.getSchemaRegistry().getUrl());
     }
 
-    @After
+    @AfterAll
     public void tearDown() {
         kafkaEnvironment.tearDown();
     }
@@ -71,10 +70,10 @@ public class PensjonsgivendeInntektToInntektSkattIT {
         config.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
 
         Map<String, String> env = new HashMap<>();
-        env.put("STS_URL", "http://localhost:" + wireMockRule.port());
+        env.put("STS_URL", "http://localhost:" + wireMockServer.port());
         env.put("STS_CLIENT_USERNAME", "testusername");
         env.put("STS_CLIENT_PASSWORD", "testpassword");
-        env.put("INNTEKT_SKATT_URL", "http://localhost:" + wireMockRule.port() + InntektSkattEndpoint);
+        env.put("INNTEKT_SKATT_URL", "http://localhost:" + wireMockServer.port() + InntektSkattEndpoint);
 
         final InntektSkattClient inntektSkattClient = new InntektSkattClient(env);
         final TokenClient tokenClient = new TokenClient(env);
