@@ -13,9 +13,9 @@ import org.junit.jupiter.api.Test;
 
 import no.nav.opptjening.loot.sts.TokenClient;
 
-public class InntektSkattClientIT {
+class InntektSkattClientIT {
 
-    public static final int WIREMOCK_SERVER_PORT = 8080;
+    private static final int WIREMOCK_SERVER_PORT = 8080;
     private static WireMockServer wireMockServer = new WireMockServer(WIREMOCK_SERVER_PORT);
     private static final String STSTokenEndpoint = "/rest/v1/sts/token";
     private static final String InntektSkattEndpoint = "/popp-ws/api/lagre-inntekt-skd";
@@ -24,7 +24,7 @@ public class InntektSkattClientIT {
     private static TokenClient tokenClient;
 
     @BeforeAll
-    public static void setUp() throws URISyntaxException {
+    static void setUp() throws URISyntaxException {
         wireMockServer.start();
         Map<String, String> env = new HashMap<>();
         env.put("STS_URL", "http://localhost:" + wireMockServer.port());
@@ -37,7 +37,7 @@ public class InntektSkattClientIT {
     }
 
     @Test
-    public void lagreBeregnetSkatt() {
+    void lagreBeregnetSkatt() {
         WireMock.stubFor(WireMock.get(WireMock.urlPathEqualTo(STSTokenEndpoint))
                 .withQueryParam("grant_type", WireMock.matching("client_credentials"))
                 .withQueryParam("scope", WireMock.matching("openid"))
@@ -71,7 +71,7 @@ public class InntektSkattClientIT {
     }
 
     @Test
-    public void lagreBeregnetSkattWithNullValue() {
+    void lagreBeregnetSkattWithNullValue() {
         WireMock.stubFor(WireMock.get(WireMock.urlPathEqualTo(STSTokenEndpoint))
                 .withQueryParam("grant_type", WireMock.matching("client_credentials"))
                 .withQueryParam("scope", WireMock.matching("openid"))

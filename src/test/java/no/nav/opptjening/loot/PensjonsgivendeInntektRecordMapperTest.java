@@ -7,12 +7,12 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
-public class PensjonsgivendeInntektRecordMapperTest {
+class PensjonsgivendeInntektRecordMapperTest {
 
     private final PensjonsgivendeInntektRecordMapper pensjonsgivendeInntektRecordMapper = new PensjonsgivendeInntektRecordMapper();
 
     @Test
-    public void mapToBeregnetSkattRequestWithInntektSkattOk() {
+    void mapToBeregnetSkattRequestWithInntektSkattOk() {
         InntektSKD inntektSKD = new InntektSKD();
         inntektSKD.setPersoninntektFiskeFangstFamilieBarnehage(9000L);
         inntektSKD.setPersoninntektLoenn(8000L);
@@ -35,7 +35,7 @@ public class PensjonsgivendeInntektRecordMapperTest {
     }
 
     @Test
-    public void mapToBeregnetSkattRequestWithInntektSkattWithNullValuesOk() {
+    void mapToBeregnetSkattRequestWithInntektSkattWithNullValuesOk() {
         InntektSKD inntektSKD = new InntektSKD();
         inntektSKD.setPersoninntektFiskeFangstFamilieBarnehage(9000L);
         inntektSKD.setPersoninntektLoenn(null);
@@ -58,7 +58,7 @@ public class PensjonsgivendeInntektRecordMapperTest {
     }
 
     @Test
-    public void mapToBeregnetSkattRequestWithInntektSkattWithOnlyNullValuesOk() {
+    void mapToBeregnetSkattRequestWithInntektSkattWithOnlyNullValuesOk() {
         InntektSKD inntektSKD = new InntektSKD();
         inntektSKD.setPersoninntektFiskeFangstFamilieBarnehage(null);
         inntektSKD.setPersoninntektLoenn(null);
@@ -81,7 +81,7 @@ public class PensjonsgivendeInntektRecordMapperTest {
     }
 
     @Test
-    public void mapToBeregnetSkattRequestWithInntektSkattNullOk() {
+    void mapToBeregnetSkattRequestWithInntektSkattNullOk() {
         InntektSKD inntektSKD = null;
 
         LagreBeregnetSkattRequest lagreBeregnetSkattRequest = pensjonsgivendeInntektRecordMapper.

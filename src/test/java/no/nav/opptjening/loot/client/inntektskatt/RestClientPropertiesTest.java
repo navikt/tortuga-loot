@@ -9,24 +9,24 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-public class RestClientPropertiesTest {
+class RestClientPropertiesTest {
 
     private static Map<String, String> env = new HashMap<>();
 
     @BeforeEach
-    public void before(){
+    void setUp(){
         env.clear();
     }
 
     @Test
-    public void createFromEnviromentWithDefaultValues() {
+    void createFromEnviromentWithDefaultValues() {
         RestClientProperties restClientProperties = RestClientProperties.createFromEnvironment(env);
         assertEquals(restClientProperties.getConnectionTimeout(), "2000");
         assertEquals(restClientProperties.getReadTimeout(), "5000");
     }
 
     @Test
-    public void createFromEnvironmetWithValuesFromEnv() {
+    void createFromEnvironmetWithValuesFromEnv() {
         env.put("REST_CLIENT_CONNECTION_TIMEOUT", "9000");
         env.put("REST_CLIENT_READ_TIMEOUT", "9000");
         RestClientProperties restClientProperties = RestClientProperties.createFromEnvironment(env);

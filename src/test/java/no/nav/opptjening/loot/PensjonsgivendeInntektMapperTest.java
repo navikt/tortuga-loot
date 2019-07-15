@@ -12,18 +12,18 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
-public class PensjonsgivendeInntektMapperTest {
+class PensjonsgivendeInntektMapperTest {
 
     private final PensjonsgivendeInntektMapper pensjonsgivendeInntektMapper = new PensjonsgivendeInntektMapper();
 
     @Test
-    public void uri() throws Exception {
+    void uri() throws Exception {
         URI uri = new URI("http://localhost:8080/foobar");
         assertEquals("http://localhost:8080/foobar", uri.toString());
     }
 
     @Test
-    public void mapToInntektSkattOk() {
+    void mapToInntektSkattOk() {
         Fastlandsinntekt fastlandsinntekt = new Fastlandsinntekt(1L, 2L, 3L, 4L);
         Svalbardinntekt svalbardinntekt = new Svalbardinntekt(5L, 6L);
         PensjonsgivendeInntekt pensjonsgivendeInntekt = new PensjonsgivendeInntekt("12345678901", "2018", fastlandsinntekt, svalbardinntekt);
@@ -38,7 +38,7 @@ public class PensjonsgivendeInntektMapperTest {
     }
 
     @Test
-    public void mapToInntektSkattWithNullValuesOk() {
+    void mapToInntektSkattWithNullValuesOk() {
         Fastlandsinntekt fastlandsinntekt = new Fastlandsinntekt(null, 2L, 3L, 4L);
         Svalbardinntekt svalbardinntekt = new Svalbardinntekt(null, null);
         PensjonsgivendeInntekt pensjonsgivendeInntekt = new PensjonsgivendeInntekt("12345678901", "2018", fastlandsinntekt, svalbardinntekt);
@@ -53,7 +53,7 @@ public class PensjonsgivendeInntektMapperTest {
     }
 
     @Test
-    public void mapToInntektSkattAsNullOk() {
+    void mapToInntektSkattAsNullOk() {
         InntektSKD inntektSKD = pensjonsgivendeInntektMapper.mapToInntektSkatt(null);
         assertNull(inntektSKD);
     }

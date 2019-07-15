@@ -32,21 +32,21 @@ import no.nav.opptjening.schema.Svalbardinntekt;
 import no.nav.opptjening.schema.skatt.hendelsesliste.HendelseKey;
 import org.junit.jupiter.api.*;
 
-public class ComponentTest {
+class ComponentTest {
 
     private static final int NUMBER_OF_BROKERS = 2;
     private static final int WIREMOCK_SERVER_PORT = 8080;
     private static KafkaEnvironment kafkaEnvironment;
     private static final List<String> TOPICS = Collections.singletonList(KafkaConfiguration.PENSJONSGIVENDE_INNTEKT_TOPIC);
-    private static final String STSTokenEndpoint = "/rest/v1/sts/token";
-    private static final String InntektSkattEndpoint = "/popp-ws/api/lagre-inntekt-skd";
+    private static final String STS_TOKEN_ENDPOINT = "/rest/v1/sts/token";
+    private static final String INNTEKT_SKATT_ENDPOINT = "/popp-ws/api/lagre-inntekt-skd";
 
     private static WireMockServer wireMockServer = new WireMockRule(WIREMOCK_SERVER_PORT);
 
     private static final Properties streamsConfiguration = new Properties();
 
     @BeforeAll
-    public static void setUp() {
+    static void setUp() {
         wireMockServer.start();
         kafkaEnvironment = new KafkaEnvironment(NUMBER_OF_BROKERS, TOPICS, Collections.emptyList(), true, false, Collections.emptyList(), false, new Properties());
         kafkaEnvironment.start();
@@ -56,12 +56,13 @@ public class ComponentTest {
     }
 
     @AfterAll
-    public static void tearDown() {
+    static void tearDown() {
+        wireMockServer.stop();
         kafkaEnvironment.tearDown();
     }
 
     @Test
-    public void kafkaStreamProcessesCorrectRecordsAndProducesOnNewTopic() throws Exception {
+    void kafkaStreamProcessesCorrectRecordsAndProducesOnNewTopic() throws Exception {
         final Properties config = (Properties) streamsConfiguration.clone();
 
         config.put(StreamsConfig.APPLICATION_ID_CONFIG, "tortuga-loot-streams");
@@ -73,7 +74,7 @@ public class ComponentTest {
         env.put("STS_URL", "http://localhost:" + wireMockServer.port());
         env.put("STS_CLIENT_USERNAME", "testusername");
         env.put("STS_CLIENT_PASSWORD", "testpassword");
-        env.put("INNTEKT_SKATT_URL", "http://localhost:" + wireMockServer.port() + InntektSkattEndpoint);
+        env.put("INNTEKT_SKATT_URL", "http://localhost:" + wireMockServer.port() + INNTEKT_SKATT_ENDPOINT);
 
         final InntektSkattClient inntektSkattClient = new InntektSkattClient(env);
         final TokenClient tokenClient = new TokenClient(env);
@@ -92,18 +93,7 @@ public class ComponentTest {
     }
 
     private void createTestRecords() {
-        Map<String, Object> configs = new HashMap<>();
-        configs.put(CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG, kafkaEnvironment.getBrokersURL());
-        configs.put(KafkaAvroSerializerConfig.SCHEMA_REGISTRY_URL_CONFIG, kafkaEnvironment.getSchemaRegistry().getUrl());
-
-        Map<String, Object> producerConfig = new HashMap<>(configs);
-        producerConfig.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, KafkaAvroSerializer.class);
-        producerConfig.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, KafkaAvroSerializer.class);
-
-        producerConfig.put(ProducerConfig.ACKS_CONFIG, "all");
-        producerConfig.put(ProducerConfig.RETRIES_CONFIG, Integer.MAX_VALUE);
-
-        Producer<HendelseKey, PensjonsgivendeInntekt> producer = new KafkaProducer<>(producerConfig);
+        Producer<HendelseKey, PensjonsgivendeInntekt> producer = testProducer();
 
         Map<HendelseKey, PensjonsgivendeInntekt> hendelser = new HashMap<>();
         hendelser.put(HendelseKey.newBuilder()
@@ -197,13 +187,28 @@ public class ComponentTest {
         producer.flush();
     }
 
+    private Producer<HendelseKey, PensjonsgivendeInntekt> testProducer() {
+        Map<String, Object> configs = new HashMap<>();
+        configs.put(CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG, kafkaEnvironment.getBrokersURL());
+        configs.put(KafkaAvroSerializerConfig.SCHEMA_REGISTRY_URL_CONFIG, kafkaEnvironment.getSchemaRegistry().getUrl());
+
+        Map<String, Object> producerConfig = new HashMap<>(configs);
+        producerConfig.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, KafkaAvroSerializer.class);
+        producerConfig.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, KafkaAvroSerializer.class);
+
+        producerConfig.put(ProducerConfig.ACKS_CONFIG, "all");
+        producerConfig.put(ProducerConfig.RETRIES_CONFIG, Integer.MAX_VALUE);
+
+        return new KafkaProducer<>(producerConfig);
+    }
+
     private void createMockApi() {
-        WireMock.stubFor(WireMock.get(WireMock.urlPathEqualTo(STSTokenEndpoint))
+        WireMock.stubFor(WireMock.get(WireMock.urlPathEqualTo(STS_TOKEN_ENDPOINT))
                 .withQueryParam("grant_type", WireMock.matching("client_credentials"))
                 .withQueryParam("scope", WireMock.matching("openid"))
                 .willReturn(WireMock.okJson("{\"access_token\":\"eyJ4vaea3\",\"expires_in\":\"3600\",\"token_type\":\"Bearer\"}")));
 
-        WireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo(InntektSkattEndpoint))
+        WireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo(INNTEKT_SKATT_ENDPOINT))
                 .withHeader("Authorization", WireMock.matching("Bearer " + "eyJ4vaea3"))
                 .willReturn(WireMock.okJson("{\"LagreBeregnetSkattResponse\":\"{}\"}"))
         );
