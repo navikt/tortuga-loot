@@ -5,12 +5,8 @@ import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerde;
 import org.apache.kafka.clients.CommonClientConfigs;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.common.config.SaslConfigs;
-import org.apache.kafka.common.config.SslConfigs;
 import org.apache.kafka.streams.StreamsConfig;
 
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.net.URL;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -26,15 +22,11 @@ public class KafkaConfiguration {
         public static final String SASL_JAAS_CONFIG = "KAFKA_SASL_JAAS_CONFIG";
         public static final String SASL_MECHANISM = "KAFKA_SASL_MECHANISM";
         public static final String SECURITY_PROTOCOL = "KAFKA_SECURITY_PROTOCOL";
-        public static final String TRUSTSTORE_LOCATION = "KAFKA_SSL_TRUSTSTORE_LOCATION";
-        public static final String TRUSTSTORE_PASSWORD = "KAFKA_SSL_TRUSTSTORE_PASSWORD";
     }
 
     private final String bootstrapServers;
     private final String schemaUrl;
     private String securityProtocol;
-    private File truststoreLocation;
-    private String truststorePassword;
     private String saslMechanism;
     private String saslJaasConfig;
     private final String password;
@@ -56,14 +48,6 @@ public class KafkaConfiguration {
 
         this.saslMechanism = nullIfEmpty(env.getOrDefault(Properties.SASL_MECHANISM, "PLAIN"));
         this.securityProtocol = nullIfEmpty(env.getOrDefault(Properties.SECURITY_PROTOCOL, "SASL_SSL"));
-
-        try {
-            this.truststoreLocation = resourceToFile(env.get(Properties.TRUSTSTORE_LOCATION));
-        } catch (FileNotFoundException e) {
-            throw new RuntimeException("Invalid truststore file", e);
-        }
-
-        this.truststorePassword = nullIfEmpty(env.get(Properties.TRUSTSTORE_PASSWORD));
     }
 
     private static String nullIfEmpty(String value) {
@@ -89,13 +73,6 @@ public class KafkaConfiguration {
             configs.put(SaslConfigs.SASL_JAAS_CONFIG, saslJaasConfig);
         }
 
-        if (truststoreLocation != null) {
-            configs.put(SslConfigs.SSL_TRUSTSTORE_LOCATION_CONFIG, truststoreLocation.getAbsolutePath());
-        }
-        if (truststorePassword != null) {
-            configs.put(SslConfigs.SSL_TRUSTSTORE_PASSWORD_CONFIG, truststorePassword);
-        }
-
         return configs;
     }
 
@@ -109,20 +86,5 @@ public class KafkaConfiguration {
         streamsConfiguration.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, SpecificAvroSerde.class);
         streamsConfiguration.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
         return streamsConfiguration;
-    }
-
-    private static File resourceToFile(String path) throws FileNotFoundException {
-        if (path == null) {
-            return null;
-        }
-
-        ClassLoader classLoader = KafkaConfiguration.class.getClassLoader();
-        URL resourceUrl = classLoader.getResource(path);
-
-        if (resourceUrl == null) {
-            throw new FileNotFoundException("Resource " + path + " can not be found, or insufficient privileges");
-        }
-
-        return new File(resourceUrl.getFile());
     }
 }
