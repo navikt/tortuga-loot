@@ -56,7 +56,7 @@ public class Application {
             InntektSkattClient inntektSkattClient = new InntektSkattClient(env);
             TokenClient tokenClient = new TokenClient(env);
 
-            app = new Application(kafkaConfiguration.streamsConfiguration(), inntektSkattClient, tokenClient);
+            app = new Application(kafkaConfiguration.streamConfiguration(), inntektSkattClient, tokenClient);
             app.startHttpServer();
             app.run();
         } catch (Throwable e) {

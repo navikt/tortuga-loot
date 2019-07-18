@@ -9,19 +9,19 @@ import org.apache.kafka.streams.StreamsConfig;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 
 public class KafkaConfiguration {
 
     public static final String PENSJONSGIVENDE_INNTEKT_TOPIC = "aapen-opptjening-pensjonsgivendeInntekt";
 
-    public static class Properties {
-        public static final String BOOTSTRAP_SERVERS = "KAFKA_BOOTSTRAP_SERVERS";
-        public static final String SCHEMA_REGISTRY_URL = "SCHEMA_REGISTRY_URL";
-        public static final String USERNAME = "KAFKA_USERNAME";
-        public static final String PASSWORD = "KAFKA_PASSWORD";
-        public static final String SASL_JAAS_CONFIG = "KAFKA_SASL_JAAS_CONFIG";
-        public static final String SASL_MECHANISM = "KAFKA_SASL_MECHANISM";
-        public static final String SECURITY_PROTOCOL = "KAFKA_SECURITY_PROTOCOL";
+    static class Properties {
+        static final String BOOTSTRAP_SERVERS = "KAFKA_BOOTSTRAP_SERVERS";
+        static final String SCHEMA_REGISTRY_URL = "SCHEMA_REGISTRY_URL";
+        static final String USERNAME = "KAFKA_USERNAME";
+        static final String PASSWORD = "KAFKA_PASSWORD";
+        static final String SASL_MECHANISM = "KAFKA_SASL_MECHANISM";
+        static final String SECURITY_PROTOCOL = "KAFKA_SECURITY_PROTOCOL";
     }
 
     private final String bootstrapServers;
@@ -29,55 +29,33 @@ public class KafkaConfiguration {
     private String securityProtocol;
     private String saslMechanism;
     private String saslJaasConfig;
-    private final String password;
-    private final String username;
 
-    public KafkaConfiguration(Map<String, String> env) {
-        this.bootstrapServers = env.getOrDefault(Properties.BOOTSTRAP_SERVERS, "b27apvl00045.preprod.local:8443,b27apvl00046.preprod.local:8443,b27apvl00047.preprod.local:8443");
-
+    KafkaConfiguration(Map<String, String> env) {
+        this.bootstrapServers = Objects.requireNonNull(env.get(Properties.BOOTSTRAP_SERVERS));
         this.schemaUrl = env.getOrDefault(Properties.SCHEMA_REGISTRY_URL, "http://kafka-schema-registry.tpa:8081");
-
-        this.username = nullIfEmpty(env.get(Properties.USERNAME));
-        this.password = nullIfEmpty(env.get(Properties.PASSWORD));
-
-        if (this.username != null && this.password != null) {
-            this.saslJaasConfig = nullIfEmpty(env.getOrDefault(Properties.SASL_JAAS_CONFIG, "org.apache.kafka.common.security.plain.PlainLoginModule required username=\"" + username + "\" password=\"" + password + "\";"));
-        } else {
-            this.saslJaasConfig = null;
-        }
-
-        this.saslMechanism = nullIfEmpty(env.getOrDefault(Properties.SASL_MECHANISM, "PLAIN"));
-        this.securityProtocol = nullIfEmpty(env.getOrDefault(Properties.SECURITY_PROTOCOL, "SASL_SSL"));
+        this.saslMechanism = env.getOrDefault(Properties.SASL_MECHANISM, "PLAIN");
+        this.securityProtocol = env.getOrDefault(Properties.SECURITY_PROTOCOL, "SASL_SSL");
+        this.saslJaasConfig = createPlainLoginModule(
+                Objects.requireNonNull(env.get(Properties.USERNAME)),
+                Objects.requireNonNull(env.get(Properties.PASSWORD))
+        );
     }
 
-    private static String nullIfEmpty(String value) {
-        if ("".equals(value)) {
-            return null;
-        }
-        return value;
+    private String createPlainLoginModule(String username, String password) {
+        return "org.apache.kafka.common.security.plain.PlainLoginModule required username=\"" + username + "\" password=\"" + password + "\";";
     }
 
-    private Map<String, Object> getCommonConfigs() {
+    private Map<String, Object> commonConfiguration() {
         Map<String, Object> configs = new HashMap<>();
         configs.put(CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
-
-        if (securityProtocol != null) {
-            configs.put(CommonClientConfigs.SECURITY_PROTOCOL_CONFIG, securityProtocol);
-        }
-
-        if (saslMechanism != null) {
-            configs.put(SaslConfigs.SASL_MECHANISM, saslMechanism);
-        }
-
-        if (saslJaasConfig != null) {
-            configs.put(SaslConfigs.SASL_JAAS_CONFIG, saslJaasConfig);
-        }
-
+        configs.put(CommonClientConfigs.SECURITY_PROTOCOL_CONFIG, securityProtocol);
+        configs.put(SaslConfigs.SASL_MECHANISM, saslMechanism);
+        configs.put(SaslConfigs.SASL_JAAS_CONFIG, saslJaasConfig);
         return configs;
     }
 
-    public java.util.Properties streamsConfiguration() {
-        Map<String, Object> configs = getCommonConfigs();
+    public java.util.Properties streamConfiguration() {
+        Map<String, Object> configs = commonConfiguration();
         final java.util.Properties streamsConfiguration = new java.util.Properties();
         streamsConfiguration.putAll(configs);
         streamsConfiguration.put(StreamsConfig.APPLICATION_ID_CONFIG, "tortuga-loot-44tp5c0x8q");

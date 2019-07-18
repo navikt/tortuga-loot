@@ -8,7 +8,6 @@ import java.util.Properties;
 
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.client.WireMock;
-import com.github.tomakehurst.wiremock.junit.WireMockRule;
 
 import org.apache.kafka.clients.CommonClientConfigs;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
@@ -36,14 +35,13 @@ class ComponentTest {
 
     private static final int NUMBER_OF_BROKERS = 2;
     private static final int WIREMOCK_SERVER_PORT = 8080;
-    private static KafkaEnvironment kafkaEnvironment;
     private static final List<String> TOPICS = Collections.singletonList(KafkaConfiguration.PENSJONSGIVENDE_INNTEKT_TOPIC);
+    private static final Properties streamsConfiguration = new Properties();
     private static final String STS_TOKEN_ENDPOINT = "/rest/v1/sts/token";
     private static final String INNTEKT_SKATT_ENDPOINT = "/popp-ws/api/lagre-inntekt-skd";
+    private static final WireMockServer wireMockServer = new WireMockServer(WIREMOCK_SERVER_PORT);
 
-    private static WireMockServer wireMockServer = new WireMockServer(WIREMOCK_SERVER_PORT);
-
-    private static final Properties streamsConfiguration = new Properties();
+    private static KafkaEnvironment kafkaEnvironment;
 
     @BeforeAll
     static void setUp() {
@@ -63,7 +61,7 @@ class ComponentTest {
 
     @Test
     void kafkaStreamProcessesCorrectRecordsAndProducesOnNewTopic() throws Exception {
-        final Properties config = (Properties) streamsConfiguration.clone();
+        Properties config = (Properties) streamsConfiguration.clone();
 
         config.put(StreamsConfig.APPLICATION_ID_CONFIG, "tortuga-loot-streams");
         config.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, SpecificAvroSerde.class);
@@ -76,9 +74,9 @@ class ComponentTest {
         env.put("STS_CLIENT_PASSWORD", "testpassword");
         env.put("INNTEKT_SKATT_URL", "http://localhost:" + wireMockServer.port() + INNTEKT_SKATT_ENDPOINT);
 
-        final InntektSkattClient inntektSkattClient = new InntektSkattClient(env);
-        final TokenClient tokenClient = new TokenClient(env);
-        final Application app = new Application(config, inntektSkattClient, tokenClient);
+        InntektSkattClient inntektSkattClient = new InntektSkattClient(env);
+        TokenClient tokenClient = new TokenClient(env);
+        Application app = new Application(config, inntektSkattClient, tokenClient);
 
         createTestRecords();
         createMockApi();
