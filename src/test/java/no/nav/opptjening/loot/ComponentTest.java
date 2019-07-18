@@ -41,7 +41,7 @@ class ComponentTest {
     private static final String STS_TOKEN_ENDPOINT = "/rest/v1/sts/token";
     private static final String INNTEKT_SKATT_ENDPOINT = "/popp-ws/api/lagre-inntekt-skd";
 
-    private static WireMockServer wireMockServer = new WireMockRule(WIREMOCK_SERVER_PORT);
+    private static WireMockServer wireMockServer = new WireMockServer(WIREMOCK_SERVER_PORT);
 
     private static final Properties streamsConfiguration = new Properties();
 
