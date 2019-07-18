@@ -11,9 +11,11 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
-public class KafkaConfiguration {
+import static no.nav.opptjening.loot.KafkaConfiguration.Properties.*;
 
-    public static final String PENSJONSGIVENDE_INNTEKT_TOPIC = "aapen-opptjening-pensjonsgivendeInntekt";
+class KafkaConfiguration {
+
+    static final String PENSJONSGIVENDE_INNTEKT_TOPIC = "aapen-opptjening-pensjonsgivendeInntekt";
 
     static class Properties {
         static final String BOOTSTRAP_SERVERS = "KAFKA_BOOTSTRAP_SERVERS";
@@ -31,13 +33,13 @@ public class KafkaConfiguration {
     private String saslJaasConfig;
 
     KafkaConfiguration(Map<String, String> env) {
-        this.bootstrapServers = Objects.requireNonNull(env.get(Properties.BOOTSTRAP_SERVERS));
-        this.schemaUrl = env.getOrDefault(Properties.SCHEMA_REGISTRY_URL, "http://kafka-schema-registry.tpa:8081");
-        this.saslMechanism = env.getOrDefault(Properties.SASL_MECHANISM, "PLAIN");
-        this.securityProtocol = env.getOrDefault(Properties.SECURITY_PROTOCOL, "SASL_SSL");
+        this.bootstrapServers = Objects.requireNonNull(env.get(BOOTSTRAP_SERVERS));
+        this.schemaUrl = env.getOrDefault(SCHEMA_REGISTRY_URL, "http://kafka-schema-registry.tpa:8081");
+        this.saslMechanism = env.getOrDefault(SASL_MECHANISM, "PLAIN");
+        this.securityProtocol = env.getOrDefault(SECURITY_PROTOCOL, "SASL_SSL");
         this.saslJaasConfig = createPlainLoginModule(
-                Objects.requireNonNull(env.get(Properties.USERNAME)),
-                Objects.requireNonNull(env.get(Properties.PASSWORD))
+                Objects.requireNonNull(env.get(USERNAME)),
+                Objects.requireNonNull(env.get(PASSWORD))
         );
     }
 
