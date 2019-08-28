@@ -31,14 +31,14 @@ pipeline {
                         -v ${PWD}:/usr/src \
                         -v ${HOME}/.m2:/var/maven/.m2 \
                         -e MAVEN_CONFIG=/var/maven/.m2 \
-                        maven:3.5-jdk-11 mvn -Duser.home=/var/maven clean package -DskipTests=true -B -V'''
+                        maven:3.6-jdk-12 mvn -Duser.home=/var/maven clean package -DskipTests=true -B -V'''
                     sh '''docker run --rm -t \
                         -w /usr/src \
                         -v ${PWD}:/usr/src \
                         -v /var/run/docker.sock:/var/run/docker.sock \
                         -v ${HOME}/.m2:/var/maven/.m2 \
                         -e MAVEN_CONFIG=/var/maven/.m2 \
-                        maven:3.5-jdk-11 mvn -Duser.home=/var/maven verify -B -e'''
+                        maven:3.6-jdk-12 mvn -Duser.home=/var/maven verify -B -e'''
                 }
             }
         }
