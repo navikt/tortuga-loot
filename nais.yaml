@@ -6,7 +6,7 @@ metadata:
   labels:
     team: teampeon
 spec:
-  image: repo.adeo.no:5443/tortuga-loot
+  image: repo.adeo.no:5443/tortuga-loot:{{version}}
   port: 8080
   ingresses:
     - {{ingress}}
