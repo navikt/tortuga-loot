@@ -65,6 +65,7 @@ pipeline {
                     latestStage = env.STAGE_NAME
                     deployments = [
                             ["dev-fss", "default"],
+                            ["prod-fss", "default"]
                     ]
                     for (deployment in deployments) {
                         latestDeploy = [deployment]
