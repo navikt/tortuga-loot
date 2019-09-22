@@ -38,7 +38,6 @@ public class TokenClient {
         if (accessToken == null || accessToken.isExpired()) {
             accessToken = getTokenFromProvider();
         }
-        LOG.debug("Returning cached and valid access-token for user: {}", stsProperties.getUsername());
         return accessToken;
     }
 
