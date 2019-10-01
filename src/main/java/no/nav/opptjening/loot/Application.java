@@ -12,7 +12,6 @@ import org.slf4j.LoggerFactory;
 import io.prometheus.client.Counter;
 
 import no.nav.opptjening.loot.client.inntektskatt.InntektSkattClient;
-import no.nav.opptjening.loot.sts.TokenClient;
 import no.nav.opptjening.nais.NaisHttpServer;
 import no.nav.opptjening.schema.PensjonsgivendeInntekt;
 import no.nav.opptjening.schema.skatt.hendelsesliste.HendelseKey;
@@ -26,8 +25,6 @@ public class Application {
     private final KafkaStreams streams;
 
     private final NaisHttpServer naisHttpServer;
-
-    private final TokenClient tokenClient;
 
     private volatile boolean shutdown = false;
 
@@ -52,22 +49,19 @@ public class Application {
             Map<String, String> env = System.getenv();
 
             KafkaConfiguration kafkaConfiguration = new KafkaConfiguration(env);
-
             InntektSkattClient inntektSkattClient = new InntektSkattClient(env);
-            TokenClient tokenClient = new TokenClient(env);
 
-            app = new Application(kafkaConfiguration.streamConfiguration(), inntektSkattClient, tokenClient);
+            app = new Application(kafkaConfiguration.streamConfiguration(), inntektSkattClient);
             app.startHttpServer();
             app.run();
-        } catch (Throwable e) {
+        } catch (Exception e) {
             LOG.error("Application failed to start", e);
             System.exit(1);
         }
     }
 
-    public Application(Properties streamsProperties, InntektSkattClient inntektSkattClient, TokenClient tokenClient) {
+    public Application(Properties streamsProperties, InntektSkattClient inntektSkattClient) {
         this.inntektSkattClient = inntektSkattClient;
-        this.tokenClient = tokenClient;
 
         StreamsBuilder builder = new StreamsBuilder();
 
@@ -97,11 +91,10 @@ public class Application {
                     pensjonsgivendeInntekterProcessed.labels(value.getInntektsaar()).inc();
                     pensjonsgivendeInntekterProcessedTotal.inc();
 
-                    LOG.debug("Saving record={} for key={}", value, key);
                     if (dryRun) {
                         LOG.info("Skipping because dryRun");
                     } else {
-                        inntektSkattClient.lagreBeregnetSkatt(value, tokenClient.getAccessToken());
+                        inntektSkattClient.lagreInntektPopp(value);
                     }
                 });
     }
