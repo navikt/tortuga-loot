@@ -28,4 +28,9 @@ public class InntektSkattProperties {
     public URI getUrl() {
         return url;
     }
+
+    public String getImage(){
+        String image = System.getenv("NAIS_APP_IMAGE");
+        return (image == null || image.isBlank()) ? "debug" : image;
+    }
 }

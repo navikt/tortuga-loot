@@ -36,6 +36,7 @@ public class InntektSkattClient {
             .help("Antall beregnet skatt requester sendt til popp.").register();
     private static final Gauge inMemBackoutQueueSize = Gauge.build()
             .name("lagre_beregnet_skatt_in_mem_backout_queue_size")
+            .labelNames("image")
             .help("Antall feilede requester i kø for resending.")
             .register();
     private static Gson gson = new GsonBuilder().setPrettyPrinting().create();
@@ -82,7 +83,7 @@ public class InntektSkattClient {
                     lagreBeregnetSkattRequest.getPersonIdent(),
                     lagreBeregnetSkattRequest.getInntektsaar());
             inMemBackoutQueue.add(lagreBeregnetSkattRequest);
-            inMemBackoutQueueSize.set(inMemBackoutQueue.size());
+            inMemBackoutQueueSize.labels(inntektSkattProperties.getImage()).set(inMemBackoutQueue.size());
         } else {
             incrementCounters(lagreBeregnetSkattRequest);
         }
@@ -91,7 +92,7 @@ public class InntektSkattClient {
     private void incrementCounters(LagreBeregnetSkattRequest lagreBeregnetSkattRequest) {
         lagreBeregnetSkattRequestsSentTotalCounter.inc();
         lagreBeregnetSkattRequestsSentCounter.labels(lagreBeregnetSkattRequest.getInntektsaar()).inc();
-        inMemBackoutQueueSize.set(inMemBackoutQueue.size());
+        inMemBackoutQueueSize.labels(inntektSkattProperties.getImage()).set(inMemBackoutQueue.size());
     }
 
     private HttpRequest createRequest(LagreBeregnetSkattRequest lagreBeregnetSkattRequest) {

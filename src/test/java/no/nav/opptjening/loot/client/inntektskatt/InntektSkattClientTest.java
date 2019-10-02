@@ -40,6 +40,7 @@ class InntektSkattClientTest {
         when(okResponse.statusCode()).thenReturn(200);
         errorResponse = mock(HttpResponse.class);
         when(inntektSkattProperties.getUrl()).thenReturn(URI.create("http://localhost:9080/popp-ws/api/inntekt/ske"));
+        when(inntektSkattProperties.getImage()).thenReturn("debug");
         when(tokenClient.getAccessToken()).thenReturn(new TokenImpl("tokenValue", 3600L, "Bearer"));
     }
 
