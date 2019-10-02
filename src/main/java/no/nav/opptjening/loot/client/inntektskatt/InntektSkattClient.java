@@ -76,8 +76,9 @@ public class InntektSkattClient {
 
     private void handleResponse(HttpResponse response, LagreBeregnetSkattRequest lagreBeregnetSkattRequest) {
         if (response.statusCode() != 200) {
-            LOG.warn("Request to POPP failed with status:{}, adding record for person:{}, year:{} to backout queue",
+            LOG.warn("Request to POPP failed with status:{}, message:{}, adding record for person:{}, year:{} to backout queue",
                     response.statusCode(),
+                    response.body(),
                     lagreBeregnetSkattRequest.getPersonIdent(),
                     lagreBeregnetSkattRequest.getInntektsaar());
             inMemBackoutQueue.add(lagreBeregnetSkattRequest);

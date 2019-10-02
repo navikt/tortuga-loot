@@ -104,7 +104,7 @@ class InntektSkattClientIT {
                 .withRequestBody(WireMock.matchingJsonPath("$.inntektSKD",
                         WireMock.equalToJson("{\"personinntektFiskeFangstFamilieBarnehage\":1,\"personinntektLoenn\":2,\"personinntektNaering\":3,"
                                 + "\"personinntektBarePensjonsdel\":4,\"svalbardLoennLoennstrekkordningen\":5,\"svalbardPersoninntektNaering\":6}}")))
-                .willReturn(WireMock.serverError())
+                .willReturn(WireMock.serverError().withBody("Internal server error!"))
                 .willSetStateTo("retryState")
         );
 
