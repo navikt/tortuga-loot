@@ -24,7 +24,6 @@ import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerde;
 
 import no.nav.common.KafkaEnvironment;
 import no.nav.opptjening.loot.client.inntektskatt.InntektSkattClient;
-import no.nav.opptjening.loot.sts.TokenClient;
 import no.nav.opptjening.schema.Fastlandsinntekt;
 import no.nav.opptjening.schema.PensjonsgivendeInntekt;
 import no.nav.opptjening.schema.Svalbardinntekt;
@@ -38,7 +37,7 @@ class ComponentTest {
     private static final List<String> TOPICS = Collections.singletonList(KafkaConfiguration.PENSJONSGIVENDE_INNTEKT_TOPIC);
     private static final Properties streamsConfiguration = new Properties();
     private static final String STS_TOKEN_ENDPOINT = "/rest/v1/sts/token";
-    private static final String INNTEKT_SKATT_ENDPOINT = "/popp-ws/api/lagre-inntekt-skd";
+    private static final String INNTEKT_SKATT_ENDPOINT = "/popp-ws/api/inntekt/ske";
     private static final WireMockServer wireMockServer = new WireMockServer(WIREMOCK_SERVER_PORT);
 
     private static KafkaEnvironment kafkaEnvironment;
@@ -75,8 +74,7 @@ class ComponentTest {
         env.put("INNTEKT_SKATT_URL", "http://localhost:" + wireMockServer.port() + INNTEKT_SKATT_ENDPOINT);
 
         InntektSkattClient inntektSkattClient = new InntektSkattClient(env);
-        TokenClient tokenClient = new TokenClient(env);
-        Application app = new Application(config, inntektSkattClient, tokenClient);
+        Application app = new Application(config, inntektSkattClient);
 
         createTestRecords();
         createMockApi();
