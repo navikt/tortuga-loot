@@ -6,9 +6,12 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
-import java.util.ArrayDeque;
+import java.util.Deque;
 import java.util.Map;
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentLinkedDeque;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -44,25 +47,25 @@ public class InntektSkattClient {
     private HttpClient httpClient;
     private InntektSkattProperties inntektSkattProperties;
     private TokenClient tokenClient;
-    private ArrayDeque<LagreBeregnetSkattRequest> inMemBackoutQueue = new ArrayDeque<>();
+    private Deque<LagreBeregnetSkattRequest> inMemBackoutQueue = new ConcurrentLinkedDeque<>();
 
     public InntektSkattClient(Map<String, String> env) throws URISyntaxException {
         this.inntektSkattProperties = InntektSkattProperties.createFromEnvironment(env);
         this.httpClient = createHttpClient(env);
         this.tokenClient = new TokenClient(env);
+        scheduleResendingOfFailedRecords();
     }
 
-    InntektSkattClient() {
+    //Test
+    InntektSkattClient(InntektSkattProperties inntektSkattProperties, HttpClient httpClient, TokenClient tokenClient) {
+        this.inntektSkattProperties = inntektSkattProperties;
+        this.httpClient = httpClient;
+        this.tokenClient = tokenClient;
+        scheduleResendingOfFailedRecords();
     }
 
     public void lagreInntektPopp(LagreBeregnetSkattRequest lagreBeregnetSkattRequest) {
         handleResponse(invokePopp(lagreBeregnetSkattRequest), lagreBeregnetSkattRequest);
-
-        if (!inMemBackoutQueue.isEmpty()) {
-            LagreBeregnetSkattRequest toRetry = inMemBackoutQueue.pop();
-            LOG.debug("Resending record for person:{}, year:{} from in-mem backout queue", toRetry.getPersonIdent(), toRetry.getInntektsaar());
-            handleResponse(invokePopp(toRetry), toRetry);
-        }
     }
 
     private HttpResponse invokePopp(LagreBeregnetSkattRequest lagreBeregnetSkattRequest) {
@@ -77,7 +80,7 @@ public class InntektSkattClient {
 
     private void handleResponse(HttpResponse response, LagreBeregnetSkattRequest lagreBeregnetSkattRequest) {
         if (response.statusCode() != 200) {
-            LOG.warn("Request to POPP failed with status:{}, message:{}, adding record for person:{}, year:{} to backout queue",
+            LOG.warn("Request to POPP failed with status:{}, message:{}, adding record for person:{}, year:{} to in-memory backout queue",
                     response.statusCode(),
                     response.body(),
                     lagreBeregnetSkattRequest.getPersonIdent(),
@@ -105,6 +108,32 @@ public class InntektSkattClient {
                 .header("Nav-Consumer-Id", "tortuga-loot")
                 .POST(HttpRequest.BodyPublishers.ofString(gson.toJson(lagreBeregnetSkattRequest)))
                 .build();
+    }
+
+    private void scheduleResendingOfFailedRecords() {
+        new Timer().schedule(new TimerTask() {
+                                 @Override
+                                 public void run() {
+                                     if (!inMemBackoutQueue.isEmpty()) {
+                                         long batchSize = determineBatchSize(inMemBackoutQueue.size());
+                                         LOG.info("Running scheduled task resending failed records. Queue size:{}, resend batch size:{}, resend interval:{}",
+                                                 inMemBackoutQueue.size(), batchSize, inntektSkattProperties.getResendInterval());
+                                         int count = 0;
+                                         do {
+                                             LagreBeregnetSkattRequest toRetry = inMemBackoutQueue.pop();
+                                             LOG.debug("Resending record for fnr:{}, year:{} from in-memory backout queue", toRetry.getPersonIdent(), toRetry.getInntektsaar());
+                                             handleResponse(invokePopp(toRetry), toRetry);
+                                             count++;
+                                         } while (!inMemBackoutQueue.isEmpty() && count < batchSize);
+                                     }
+                                 }
+                             },
+                inntektSkattProperties.getResendInterval(),
+                inntektSkattProperties.getResendInterval());
+    }
+
+    private long determineBatchSize(int queueSize) {
+        return Math.min(queueSize, inntektSkattProperties.getMaxResendBatchSize());
     }
 
     private HttpClient createHttpClient(@NotNull Map<String, String> env) {

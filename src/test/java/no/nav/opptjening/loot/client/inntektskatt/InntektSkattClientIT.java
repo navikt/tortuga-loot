@@ -31,6 +31,8 @@ class InntektSkattClientIT {
         env.put("STS_CLIENT_USERNAME", "testusername");
         env.put("STS_CLIENT_PASSWORD", "testpassword");
         env.put("INNTEKT_SKATT_URL", "http://localhost:" + wireMockServer.port() + InntektSkattEndpoint);
+        env.put("RESEND_MAX_BACH_SIZE", "1");
+        env.put("RESEND_INTERVAL", "10");
 
         inntektSkattClient = new InntektSkattClient(env);
 
