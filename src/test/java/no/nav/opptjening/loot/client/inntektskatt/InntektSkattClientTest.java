@@ -9,11 +9,11 @@ import static org.mockito.Mockito.when;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpResponse;
-import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -28,6 +28,8 @@ class InntektSkattClientTest {
     private InntektSkattProperties inntektSkattProperties;
     @Mock
     private TokenClient tokenClient;
+    @InjectMocks
+    private InntektSkattClient inntektSkattClient = new InntektSkattClient();
 
     private HttpResponse okResponse;
     private HttpResponse errorResponse;
@@ -45,64 +47,34 @@ class InntektSkattClientTest {
     @Test
     @SuppressWarnings("unchecked")
     void shouldRetryWhenErrorResponse() throws Exception {
-        when(inntektSkattProperties.getMaxResendBatchSize()).thenReturn(10L);
-        when(inntektSkattProperties.getResendInterval()).thenReturn(100L);
         when(errorResponse.statusCode()).thenReturn(500);
         when(httpClient.send(any(), any()))
                 .thenReturn(errorResponse)
                 .thenReturn(okResponse);
-        new InntektSkattClient(inntektSkattProperties, httpClient, tokenClient).lagreInntektPopp(createRequest("01029804032", "2019"));
-        TimeUnit.MILLISECONDS.sleep(500);
+        inntektSkattClient.lagreInntektPopp(createRequest("01029804032", "2019"));
         verify(tokenClient, times(2)).getAccessToken();
         verify(httpClient, times(2)).send(any(), any());
     }
 
     @Test
     @SuppressWarnings("unchecked")
-    void shouldRetryMultipleTimesWhenErrorResponse() throws Exception {
-        when(inntektSkattProperties.getMaxResendBatchSize()).thenReturn(1L);
-        when(inntektSkattProperties.getResendInterval()).thenReturn(100L);
+    void shouldRetryOnNextRequestIfImmediateResendFails() throws Exception {
         when(errorResponse.statusCode()).thenReturn(500);
         when(httpClient.send(any(), any()))
                 .thenReturn(errorResponse)
                 .thenReturn(errorResponse)
-                .thenReturn(errorResponse)
                 .thenReturn(okResponse);
-        new InntektSkattClient(inntektSkattProperties, httpClient, tokenClient).lagreInntektPopp(createRequest("01029804032", "2019"));
-        TimeUnit.MILLISECONDS.sleep(1000);
-        verify(tokenClient, times(4)).getAccessToken();
-        verify(httpClient, times(4)).send(any(), any());
-    }
-
-    @Test
-    @SuppressWarnings("unchecked")
-    void shouldRetryMultipleTimesWhenErrorResponseMultiplePersons() throws Exception {
-        when(inntektSkattProperties.getMaxResendBatchSize()).thenReturn(3L);
-        when(inntektSkattProperties.getResendInterval()).thenReturn(500L);
-        when(errorResponse.statusCode()).thenReturn(500);
-        when(httpClient.send(any(), any()))
-                .thenReturn(errorResponse)
-                .thenReturn(errorResponse)
-                .thenReturn(errorResponse)
-                .thenReturn(errorResponse)
-                .thenReturn(errorResponse)
-                .thenReturn(errorResponse)
-                .thenReturn(okResponse);
-        InntektSkattClient inntektSkattClient = new InntektSkattClient(inntektSkattProperties, httpClient, tokenClient);
         inntektSkattClient.lagreInntektPopp(createRequest("01029804032", "2019"));
         inntektSkattClient.lagreInntektPopp(createRequest("80403201029", "2019"));
-        inntektSkattClient.lagreInntektPopp(createRequest("20102980403", "2019"));
-        TimeUnit.MILLISECONDS.sleep(2000);
-        verify(tokenClient, times(9)).getAccessToken();
-        verify(httpClient, times(9)).send(any(), any());
+        inntektSkattClient.lagreInntektPopp(createRequest("03201029804", "2019"));
+        verify(tokenClient, times(5)).getAccessToken();
+        verify(httpClient, times(5)).send(any(), any());
     }
 
     @Test
     @SuppressWarnings("unchecked")
     void shouldSendContinouslyIfNoErrors() throws Exception {
-        when(inntektSkattProperties.getResendInterval()).thenReturn(100L);
         when(httpClient.send(any(), any())).thenReturn(okResponse);
-        InntektSkattClient inntektSkattClient = new InntektSkattClient(inntektSkattProperties, httpClient, tokenClient);
         inntektSkattClient.lagreInntektPopp(createRequest("01029804032", "2019"));
         inntektSkattClient.lagreInntektPopp(createRequest("80403201029", "2019"));
         inntektSkattClient.lagreInntektPopp(createRequest("03201029804", "2019"));
