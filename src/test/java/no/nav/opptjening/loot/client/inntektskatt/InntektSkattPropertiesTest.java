@@ -1,16 +1,14 @@
 package no.nav.opptjening.loot.client.inntektskatt;
 
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import org.junit.jupiter.api.Test;
+import static no.nav.opptjening.loot.client.inntektskatt.InntektSkattProperties.createFromEnvironment;
 
 import java.net.URISyntaxException;
 import java.util.HashMap;
 import java.util.Map;
 
-import static no.nav.opptjening.loot.client.inntektskatt.InntektSkattProperties.createFromEnvironment;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import org.junit.jupiter.api.Test;
 
 class InntektSkattPropertiesTest {
 
@@ -27,21 +25,5 @@ class InntektSkattPropertiesTest {
         String malformedUrl = "https://www.malformedUrl .com";
         applicationEnvironment.put("INNTEKT_SKATT_URL", malformedUrl);
         assertThrows(URISyntaxException.class, () -> createFromEnvironment(applicationEnvironment));
-    }
-
-    @Test
-    void createsWithEnvOrDefault() throws URISyntaxException {
-        applicationEnvironment.put("INNTEKT_SKATT_URL", "http://localhost:9080/api/lol");
-        applicationEnvironment.put("RESEND_MAX_BACH_SIZE", "200");
-        applicationEnvironment.put("RESEND_INTERVAL", "2500");
-        InntektSkattProperties properties = createFromEnvironment(applicationEnvironment);
-        assertEquals(properties.getMaxResendBatchSize(), 200L);
-        assertEquals(properties.getResendInterval(), 2500L);
-
-        Map<String, String> envWithDefaults = new HashMap<>();
-        envWithDefaults.put("INNTEKT_SKATT_URL", "http://localhost:9080/api/lol");
-        InntektSkattProperties defaultProps = createFromEnvironment(envWithDefaults);
-        assertEquals(defaultProps.getMaxResendBatchSize(), 50L);
-        assertEquals(defaultProps.getResendInterval(), 60000L);
     }
 }
