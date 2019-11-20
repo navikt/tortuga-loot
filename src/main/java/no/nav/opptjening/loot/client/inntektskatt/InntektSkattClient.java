@@ -18,7 +18,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.prometheus.client.Counter;
-import io.prometheus.client.Gauge;
 
 import no.nav.opptjening.loot.RestClientProperties;
 import no.nav.opptjening.loot.sts.Token;
@@ -34,11 +33,7 @@ public class InntektSkattClient {
             .name("lagre_beregnet_skatt_requests_sent")
             .labelNames("year")
             .help("Antall beregnet skatt requester sendt til popp.").register();
-    private static final Gauge inMemBackoutQueueSize = Gauge.build()
-            .name("lagre_beregnet_skatt_in_mem_backout_queue_size")
-            .labelNames("image")
-            .help("Antall feilede requester i kø for resending.")
-            .register();
+
     private static Gson gson = new GsonBuilder().setPrettyPrinting().create();
 
     private HttpClient httpClient;
@@ -75,24 +70,19 @@ public class InntektSkattClient {
         }
     }
 
-    private void handleResponse(HttpResponse response, LagreBeregnetSkattRequest lagreBeregnetSkattRequest) {
-        if (response.statusCode() != 200) {
-            LOG.warn("Request to POPP failed with status:{}, message:{}, adding record for person:{}, year:{} to backout queue",
-                    response.statusCode(),
-                    response.body(),
-                    lagreBeregnetSkattRequest.getPersonIdent(),
-                    lagreBeregnetSkattRequest.getInntektsaar());
-            inMemBackoutQueue.add(lagreBeregnetSkattRequest);
-            inMemBackoutQueueSize.labels(inntektSkattProperties.getImage()).set(inMemBackoutQueue.size());
-        } else {
+    private void handleResponse(HttpResponse response, LagreBeregnetSkattRequest lagreBeregnetSkattRequest) throws Exception {
+        if (response.statusCode() == 200) {
             incrementCounters(lagreBeregnetSkattRequest);
+        } else {
+            throw new Exception(
+                    "Request to POPP failed with status: " + response.statusCode() + ", message:" + response.body() + ", for person:" + lagreBeregnetSkattRequest.getPersonIdent()
+                            + " , year: " + lagreBeregnetSkattRequest.getInntektsaar());
         }
     }
 
     private void incrementCounters(LagreBeregnetSkattRequest lagreBeregnetSkattRequest) {
         lagreBeregnetSkattRequestsSentTotalCounter.inc();
         lagreBeregnetSkattRequestsSentCounter.labels(lagreBeregnetSkattRequest.getInntektsaar()).inc();
-        inMemBackoutQueueSize.labels(inntektSkattProperties.getImage()).set(inMemBackoutQueue.size());
     }
 
     private HttpRequest createRequest(LagreBeregnetSkattRequest lagreBeregnetSkattRequest) {

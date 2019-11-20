@@ -25,6 +25,7 @@ class InntektSkattClientIT {
 
     @BeforeAll
     static void setUp() throws URISyntaxException {
+
         wireMockServer.start();
         Map<String, String> env = new HashMap<>();
         env.put("STS_URL", "http://localhost:" + wireMockServer.port());
@@ -34,11 +35,7 @@ class InntektSkattClientIT {
 
         inntektSkattClient = new InntektSkattClient(env);
 
-        WireMock.stubFor(WireMock.get(WireMock.urlPathEqualTo(STSTokenEndpoint))
-                .withQueryParam("grant_type", WireMock.matching("client_credentials"))
-                .withQueryParam("scope", WireMock.matching("openid"))
-                .withHeader("Authorization", WireMock.matching("Basic " + Base64.getEncoder().encodeToString(("testusername" + ":" + "testpassword").getBytes())))
-                .willReturn(WireMock.okJson("{\"access_token\":\"eyJ4vaea3\",\"expires_in\":\"3600\",\"token_type\":\"Bearer\"}")));
+
     }
 
     @AfterAll
@@ -48,6 +45,13 @@ class InntektSkattClientIT {
 
     @Test
     void lagreBeregnetSkatt() {
+
+        WireMock.stubFor(WireMock.get(WireMock.urlPathEqualTo(STSTokenEndpoint))
+                .withQueryParam("grant_type", WireMock.matching("client_credentials"))
+                .withQueryParam("scope", WireMock.matching("openid"))
+                .withHeader("Authorization", WireMock.matching("Basic " + Base64.getEncoder().encodeToString(("testusername" + ":" + "testpassword").getBytes())))
+                .willReturn(WireMock.okJson("{\"access_token\":\"eyJ4vaea3\",\"expires_in\":\"3600\",\"token_type\":\"Bearer\"}")));
+
         WireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo(InntektSkattEndpoint))
                 .withHeader("Authorization", WireMock.matching("Bearer " + "eyJ4vaea3"))
                 .withRequestBody(WireMock.matchingJsonPath("$.[?(@.personIdent == '01029804032')]"))
