@@ -50,7 +50,7 @@ public class InntektSkattClient {
     InntektSkattClient() {
     }
 
-    public void lagreInntektPopp(LagreBeregnetSkattRequest lagreBeregnetSkattRequest) {
+    public void lagreInntektPopp(LagreBeregnetSkattRequest lagreBeregnetSkattRequest) throws Exception {
         handleResponse(invokePopp(lagreBeregnetSkattRequest), lagreBeregnetSkattRequest);
 
         if (!inMemBackoutQueue.isEmpty()) {
@@ -73,6 +73,8 @@ public class InntektSkattClient {
     private void handleResponse(HttpResponse response, LagreBeregnetSkattRequest lagreBeregnetSkattRequest) throws Exception {
         if (response.statusCode() == 200) {
             incrementCounters(lagreBeregnetSkattRequest);
+        } else if (response.statusCode() >= 400 && response.statusCode() < 500) {
+            //todo
         } else {
             throw new Exception(
                     "Request to POPP failed with status: " + response.statusCode() + ", message:" + response.body() + ", for person:" + lagreBeregnetSkattRequest.getPersonIdent()

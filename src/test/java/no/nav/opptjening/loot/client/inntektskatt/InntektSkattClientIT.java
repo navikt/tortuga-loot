@@ -2,6 +2,8 @@ package no.nav.opptjening.loot.client.inntektskatt;
 
 import static com.github.tomakehurst.wiremock.stubbing.Scenario.STARTED;
 
+import static org.junit.jupiter.api.Assertions.assertThrows;
+
 import java.net.URISyntaxException;
 import java.util.Base64;
 import java.util.HashMap;
@@ -34,17 +36,15 @@ class InntektSkattClientIT {
         env.put("INNTEKT_SKATT_URL", "http://localhost:" + wireMockServer.port() + InntektSkattEndpoint);
 
         inntektSkattClient = new InntektSkattClient(env);
-
-
     }
 
     @AfterAll
-    static void afterAll(){
+    static void afterAll() {
         wireMockServer.stop();
     }
 
     @Test
-    void lagreBeregnetSkatt() {
+    void lagreBeregnetSkatt() throws Exception {
 
         WireMock.stubFor(WireMock.get(WireMock.urlPathEqualTo(STSTokenEndpoint))
                 .withQueryParam("grant_type", WireMock.matching("client_credentials"))
@@ -79,7 +79,7 @@ class InntektSkattClientIT {
     }
 
     @Test
-    void lagreBeregnetSkattWithNullValue() {
+    void lagreBeregnetSkattWithNullValue() throws Exception {
         WireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo(InntektSkattEndpoint))
                 .withHeader("Authorization", WireMock.matching("Bearer " + "eyJ4vaea3"))
                 .withHeader("Nav-Call-Id", WireMock.notMatching("UUID"))
@@ -98,7 +98,28 @@ class InntektSkattClientIT {
     }
 
     @Test
-    void shouldRetryWhenResponseNotOk() {
+    public void shouldThrowExceptionOnHTTPResponse500() {
+
+        WireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo(InntektSkattEndpoint))
+                //Wrong bearertoken
+                .withHeader("Authorization", WireMock.matching("Bearer " + "eyJ4vaea3"))
+                .withHeader("Nav-Call-Id", WireMock.notMatching("UUID"))
+                .withHeader("Nav-Consumer-Id", WireMock.matching("tortuga-loot"))
+                .withRequestBody(WireMock.matchingJsonPath("$.[?(@.personIdent == '01029804032')]"))
+                .withRequestBody(WireMock.matchingJsonPath("$.[?(@.inntektsaar == '2017')]"))
+                .willReturn(WireMock.serverError())
+        );
+
+        LagreBeregnetSkattRequest lagreBeregnetSkattRequest = new LagreBeregnetSkattRequest();
+        lagreBeregnetSkattRequest.setPersonIdent("01029804032");
+        lagreBeregnetSkattRequest.setInntektsaar("2017");
+        lagreBeregnetSkattRequest.setInntektSKD(null);
+
+        assertThrows(Exception.class, () -> inntektSkattClient.lagreInntektPopp(lagreBeregnetSkattRequest));
+    }
+
+    //TODO: Remove?
+    void shouldRetryWhenResponseNotOk() throws Exception {
         WireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo(InntektSkattEndpoint))
                 .inScenario("retry")
                 .whenScenarioStateIs(STARTED)
