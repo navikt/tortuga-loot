@@ -10,6 +10,8 @@ import java.util.ArrayDeque;
 import java.util.Map;
 import java.util.UUID;
 
+import javax.ws.rs.core.Response;
+
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
@@ -71,9 +73,12 @@ public class InntektSkattClient {
     }
 
     private void handleResponse(HttpResponse response, LagreBeregnetSkattRequest lagreBeregnetSkattRequest) throws Exception {
-        if (response.statusCode() == 200) {
+        //200 responses
+        if (Response.Status.Family.familyOf(response.statusCode()).equals(Response.Status.Family.SUCCESSFUL)) {
             incrementCounters(lagreBeregnetSkattRequest);
-        } else if (response.statusCode() >= 400 && response.statusCode() < 500) {
+        }
+        //400 responses
+        else if (Response.Status.Family.familyOf(response.statusCode()).equals(Response.Status.Family.CLIENT_ERROR)){
             //todo
         } else {
             throw new Exception(
