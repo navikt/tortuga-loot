@@ -52,14 +52,8 @@ public class InntektSkattClient {
     InntektSkattClient() {
     }
 
-    public void lagreInntektPopp(LagreBeregnetSkattRequest lagreBeregnetSkattRequest) throws Exception {
+    public void lagreInntektPopp(LagreBeregnetSkattRequest lagreBeregnetSkattRequest) {
         handleResponse(invokePopp(lagreBeregnetSkattRequest), lagreBeregnetSkattRequest);
-
-        if (!inMemBackoutQueue.isEmpty()) {
-            LagreBeregnetSkattRequest toRetry = inMemBackoutQueue.pop();
-            LOG.debug("Resending record for person:{}, year:{} from in-mem backout queue", toRetry.getPersonIdent(), toRetry.getInntektsaar());
-            handleResponse(invokePopp(toRetry), toRetry);
-        }
     }
 
     private HttpResponse invokePopp(LagreBeregnetSkattRequest lagreBeregnetSkattRequest) {
@@ -72,18 +66,18 @@ public class InntektSkattClient {
         }
     }
 
-    private void handleResponse(HttpResponse response, LagreBeregnetSkattRequest lagreBeregnetSkattRequest) throws Exception {
-        //200 responses
+    private void handleResponse(HttpResponse response, LagreBeregnetSkattRequest lagreBeregnetSkattRequest) {
         if (Response.Status.Family.familyOf(response.statusCode()).equals(Response.Status.Family.SUCCESSFUL)) {
             incrementCounters(lagreBeregnetSkattRequest);
         }
-        //400 responses
-        else if (Response.Status.Family.familyOf(response.statusCode()).equals(Response.Status.Family.CLIENT_ERROR)){
-            //todo
-        } else {
-            throw new Exception(
+        //401 is usually caused by a token expiring. Handled here by crashing the app, which should make it retry the request
+        else if (Response.Status.UNAUTHORIZED.getStatusCode() == response.statusCode()) {
+            throw new RuntimeException(
                     "Request to POPP failed with status: " + response.statusCode() + ", message:" + response.body() + ", for person:" + lagreBeregnetSkattRequest.getPersonIdent()
                             + " , year: " + lagreBeregnetSkattRequest.getInntektsaar());
+        } else {
+            //Skipping 500 and the rest of 400 responses.
+            return;
         }
     }
 
