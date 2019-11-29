@@ -1,5 +1,6 @@
 package no.nav.opptjening.loot.client.inntektskatt;
 
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
@@ -37,23 +38,21 @@ class InntektSkattClientTest {
     @BeforeEach
     void beforeEach() {
         okResponse = mock(HttpResponse.class);
-        when(okResponse.statusCode()).thenReturn(200);
         errorResponse = mock(HttpResponse.class);
         when(inntektSkattProperties.getUrl()).thenReturn(URI.create("http://localhost:9080/popp-ws/api/inntekt/ske"));
-        when(inntektSkattProperties.getImage()).thenReturn("debug");
         when(tokenClient.getAccessToken()).thenReturn(new TokenImpl("tokenValue", 3600L, "Bearer"));
     }
 
     @Test
     @SuppressWarnings("unchecked")
-    void shouldRetryWhenErrorResponse() throws Exception {
+    void shoulNotRetryWhenErrorResponse() throws Exception {
         when(errorResponse.statusCode()).thenReturn(500);
         when(httpClient.send(any(), any()))
                 .thenReturn(errorResponse)
                 .thenReturn(okResponse);
         inntektSkattClient.lagreInntektPopp(createRequest("01029804032", "2019"));
-        verify(tokenClient, times(2)).getAccessToken();
-        verify(httpClient, times(2)).send(any(), any());
+        verify(tokenClient, times(1)).getAccessToken();
+        verify(httpClient, times(1)).send(any(), any());
     }
 
     @Test
@@ -67,13 +66,30 @@ class InntektSkattClientTest {
         inntektSkattClient.lagreInntektPopp(createRequest("01029804032", "2019"));
         inntektSkattClient.lagreInntektPopp(createRequest("80403201029", "2019"));
         inntektSkattClient.lagreInntektPopp(createRequest("03201029804", "2019"));
-        verify(tokenClient, times(5)).getAccessToken();
-        verify(httpClient, times(5)).send(any(), any());
+        verify(tokenClient, times(3)).getAccessToken();
+        verify(httpClient, times(3)).send(any(), any());
     }
 
     @Test
     @SuppressWarnings("unchecked")
-    void shouldSendContinouslyIfNoErrors() throws Exception {
+    void shouldThrowRuntimeExceptionOn401Response() throws Exception {
+        when(errorResponse.statusCode()).thenReturn(401);
+        when(httpClient.send(any(), any()))
+                .thenReturn(errorResponse);
+        boolean isExceptionThrown = false;
+        try {
+            inntektSkattClient.lagreInntektPopp(createRequest("03201029804", "2019"));
+        } catch (RuntimeException ex) {
+            isExceptionThrown = true;
+        }
+        verify(tokenClient, times(1)).getAccessToken();
+        verify(httpClient, times(1)).send(any(), any());
+        assertTrue(isExceptionThrown);
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void shouldSendContinuouslyIfNoErrors() throws Exception {
         when(httpClient.send(any(), any())).thenReturn(okResponse);
         inntektSkattClient.lagreInntektPopp(createRequest("01029804032", "2019"));
         inntektSkattClient.lagreInntektPopp(createRequest("80403201029", "2019"));
