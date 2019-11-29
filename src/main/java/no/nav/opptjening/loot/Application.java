@@ -94,12 +94,8 @@ public class Application {
                     if (dryRun) {
                         LOG.info("Skipping because dryRun");
                     } else {
-                        try {
-                            inntektSkattClient.lagreInntektPopp(value);
-                        }
-                        catch(Exception ex){
-                            LOG.error(ex.getStackTrace().toString());
-                        }
+
+                        inntektSkattClient.lagreInntektPopp(value);
                     }
                 });
     }
