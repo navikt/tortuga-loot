@@ -6,7 +6,6 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
-import java.util.ArrayDeque;
 import java.util.Map;
 import java.util.UUID;
 
@@ -41,7 +40,6 @@ public class InntektSkattClient {
     private HttpClient httpClient;
     private InntektSkattProperties inntektSkattProperties;
     private TokenClient tokenClient;
-    private ArrayDeque<LagreBeregnetSkattRequest> inMemBackoutQueue = new ArrayDeque<>();
 
     public InntektSkattClient(Map<String, String> env) throws URISyntaxException {
         this.inntektSkattProperties = InntektSkattProperties.createFromEnvironment(env);
@@ -69,14 +67,11 @@ public class InntektSkattClient {
     private void handleResponse(HttpResponse response, LagreBeregnetSkattRequest lagreBeregnetSkattRequest) {
         if (Response.Status.Family.familyOf(response.statusCode()).equals(Response.Status.Family.SUCCESSFUL)) {
             incrementCounters(lagreBeregnetSkattRequest);
-        }
-        //401 is usually caused by a token expiring. Handled here by crashing the app, which should make it retry the request
-        else if (Response.Status.UNAUTHORIZED.getStatusCode() == response.statusCode()) {
+        } else if (Response.Status.UNAUTHORIZED.getStatusCode() == response.statusCode()) {
             throw new RuntimeException(
                     "Request to POPP failed with status: " + response.statusCode() + ", message:" + response.body() + ", for person:" + lagreBeregnetSkattRequest.getPersonIdent()
                             + " , year: " + lagreBeregnetSkattRequest.getInntektsaar());
         } else {
-            //Skipping 500 and the rest of 400 responses.
             return;
         }
     }
