@@ -8,6 +8,7 @@ import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 import javax.ws.rs.core.Response;
 
@@ -34,6 +35,10 @@ public class InntektSkattClient {
             .name("lagre_beregnet_skatt_requests_sent")
             .labelNames("year")
             .help("Antall beregnet skatt requester sendt til popp.").register();
+
+    private static final Counter errorWhenIvokingPoppCounter = Counter.build()
+            .name("error_naar_popp_blir_kalt")
+            .help("Antall requests som ikke returnerte 200 fra Popp etter 3 forsøk").register();
 
     private static Gson gson = new GsonBuilder().setPrettyPrinting().create();
 
@@ -70,9 +75,24 @@ public class InntektSkattClient {
         } else if (Response.Status.UNAUTHORIZED.getStatusCode() == response.statusCode()) {
             throw new RuntimeException(
                     "Request to POPP failed with status: " + response.statusCode() + ", message:" + response.body() + ", for person:" + lagreBeregnetSkattRequest.getPersonIdent()
-                            + " , year: " + lagreBeregnetSkattRequest.getInntektsaar());
+                            + " , year: " + lagreBeregnetSkattRequest.getInntektsaar() + ". Crashing intentionally to try again on same user");
         } else {
-            return;
+            try {
+                int MAX_ATTEMPTS = 3;
+                int attempts = 1;
+                while (attempts <= MAX_ATTEMPTS) {
+                    response = invokePopp(lagreBeregnetSkattRequest);
+                    if (response.statusCode() == 200) {
+                        incrementCounters(lagreBeregnetSkattRequest);
+                        return;
+                    }
+
+                    TimeUnit.MILLISECONDS.sleep(attempts * 200 * 2);
+                    attempts++;
+                }
+            } catch (InterruptedException e) {
+            }
+            errorWhenIvokingPoppCounter.inc();
         }
     }
 
