@@ -38,7 +38,7 @@ public class InntektSkattClient {
 
     private static final Counter errorWhenIvokingPoppCounter = Counter.build()
             .name("error_naar_popp_blir_kalt")
-            .help("Antall requests som ikke returnerte 200 fra Popp etter 3 forsøk").register();
+            .help("Antall requests som ikke returnerte 200 fra Popp etter 3 forsoek").register();
 
     private static Gson gson = new GsonBuilder().setPrettyPrinting().create();
 
