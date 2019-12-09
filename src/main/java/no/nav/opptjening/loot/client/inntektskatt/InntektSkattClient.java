@@ -82,7 +82,7 @@ public class InntektSkattClient {
                 int attempts = 1;
                 while (attempts <= MAX_ATTEMPTS) {
                     response = invokePopp(lagreBeregnetSkattRequest);
-                    if (response.statusCode() == 200) {
+                    if (Response.Status.Family.familyOf(response.statusCode()).equals(Response.Status.Family.SUCCESSFUL)) {
                         incrementCounters(lagreBeregnetSkattRequest);
                         return;
                     }
