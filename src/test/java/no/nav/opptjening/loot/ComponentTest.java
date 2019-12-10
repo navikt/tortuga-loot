@@ -16,6 +16,9 @@ import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.streams.StreamsConfig;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import io.confluent.kafka.serializers.AbstractKafkaAvroSerDeConfig;
 import io.confluent.kafka.serializers.KafkaAvroSerializer;
@@ -28,7 +31,6 @@ import no.nav.opptjening.schema.Fastlandsinntekt;
 import no.nav.opptjening.schema.PensjonsgivendeInntekt;
 import no.nav.opptjening.schema.Svalbardinntekt;
 import no.nav.opptjening.schema.skatt.hendelsesliste.HendelseKey;
-import org.junit.jupiter.api.*;
 
 class ComponentTest {
 
@@ -55,7 +57,6 @@ class ComponentTest {
     @AfterAll
     static void tearDown() {
         wireMockServer.stop();
-        kafkaEnvironment.tearDown();
     }
 
     @Test
