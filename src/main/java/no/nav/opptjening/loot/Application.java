@@ -36,10 +36,10 @@ public class Application {
             .labelNames("year")
             .help("Antall pensjonsgivende inntekter prosessert").register();
 
-    private static final boolean dryRun;
+    private static final boolean DRY_RUN;
 
     static {
-        dryRun = "true".equalsIgnoreCase(System.getenv().getOrDefault("DRY_RUN", "false"));
+        DRY_RUN = "true".equalsIgnoreCase(System.getenv().getOrDefault("DRY_RUN", "false"));
     }
 
     public static void main(String[] args) {
@@ -91,10 +91,9 @@ public class Application {
                     pensjonsgivendeInntekterProcessed.labels(value.getInntektsaar()).inc();
                     pensjonsgivendeInntekterProcessedTotal.inc();
 
-                    if (dryRun) {
+                    if (DRY_RUN) {
                         LOG.info("Skipping because dryRun");
                     } else {
-
                         inntektSkattClient.lagreInntektPopp(value);
                     }
                 });

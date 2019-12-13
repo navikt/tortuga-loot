@@ -19,6 +19,9 @@ import org.junit.jupiter.api.Test;
 class InntektSkattClientIT {
 
     private static final int WIREMOCK_SERVER_PORT = 8080;
+    private static final String INVALID_BEARER_TOKEN = "Bearer " + "eyJ4vaea3";
+    private static final String FNR = "01029804032";
+    private static final String INNTEKTSAR = "2017";
     private static WireMockServer wireMockServer = new WireMockServer(WIREMOCK_SERVER_PORT);
     private static final String STSTokenEndpoint = "/rest/v1/sts/token";
     private static final String InntektSkattEndpoint = "/popp-ws/api/inntekt/ske";
@@ -98,21 +101,20 @@ class InntektSkattClientIT {
     }
 
     @Test
-    public void shouldThrowExceptionOnHTTPResponse500() {
+    void shouldThrowExceptionOnHTTPResponse500() {
 
         WireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo(InntektSkattEndpoint))
-                //Wrong bearertoken
-                .withHeader("Authorization", WireMock.matching("Bearer " + "eyJ4vaea3"))
+                .withHeader("Authorization", WireMock.matching(INVALID_BEARER_TOKEN))
                 .withHeader("Nav-Call-Id", WireMock.notMatching("UUID"))
                 .withHeader("Nav-Consumer-Id", WireMock.matching("tortuga-loot"))
-                .withRequestBody(WireMock.matchingJsonPath("$.[?(@.personIdent == '01029804032')]"))
-                .withRequestBody(WireMock.matchingJsonPath("$.[?(@.inntektsaar == '2017')]"))
+                .withRequestBody(WireMock.matchingJsonPath("$.[?(@.personIdent == '" + FNR + "')]"))
+                .withRequestBody(WireMock.matchingJsonPath("$.[?(@.inntektsaar == '" + INNTEKTSAR + "')]"))
                 .willReturn(WireMock.serverError())
         );
 
         LagreBeregnetSkattRequest lagreBeregnetSkattRequest = new LagreBeregnetSkattRequest();
-        lagreBeregnetSkattRequest.setPersonIdent("01029804032");
-        lagreBeregnetSkattRequest.setInntektsaar("2017");
+        lagreBeregnetSkattRequest.setPersonIdent(FNR);
+        lagreBeregnetSkattRequest.setInntektsaar(INNTEKTSAR);
         lagreBeregnetSkattRequest.setInntektSKD(null);
 
         assertThrows(Exception.class, () -> inntektSkattClient.lagreInntektPopp(lagreBeregnetSkattRequest));

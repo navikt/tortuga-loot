@@ -67,7 +67,6 @@ class ComponentTest {
         config.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, SpecificAvroSerde.class);
         config.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, SpecificAvroSerde.class);
         config.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
-
         Map<String, String> env = new HashMap<>();
         env.put("STS_URL", "http://localhost:" + wireMockServer.port());
         env.put("STS_CLIENT_USERNAME", "testusername");

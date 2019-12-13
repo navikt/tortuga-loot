@@ -8,7 +8,6 @@ import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.TimeUnit;
 
 import javax.ws.rs.core.Response;
 
@@ -35,12 +34,13 @@ public class InntektSkattClient {
             .name("lagre_beregnet_skatt_requests_sent")
             .labelNames("year")
             .help("Antall beregnet skatt requester sendt til popp.").register();
-
     private static final Counter errorWhenIvokingPoppCounter = Counter.build()
             .name("error_naar_popp_blir_kalt")
             .help("Antall requests som ikke returnerte 200 fra Popp etter 3 forsoek").register();
 
     private static Gson gson = new GsonBuilder().setPrettyPrinting().create();
+
+    private static final int RETRY_ATTEMPTS = 3;
 
     private HttpClient httpClient;
     private InntektSkattProperties inntektSkattProperties;
@@ -64,35 +64,44 @@ public class InntektSkattClient {
         try {
             return httpClient.send(createRequest(lagreBeregnetSkattRequest), HttpResponse.BodyHandlers.ofString());
         } catch (IOException | InterruptedException e) {
-            LOG.error("Exception while invoking endpoint:{}, message:{}", inntektSkattProperties.getUrl().toString(), e.getMessage());
-            throw new RuntimeException("Exception while invoking endpoint: " + inntektSkattProperties.getUrl().toString() + ": " + e.getMessage(), e);
+            throw new CouldNotReachPoppException("Exception while invoking endpoint: " + inntektSkattProperties.getUrl().toString() + ": " + e.getMessage(), e);
         }
     }
 
     private void handleResponse(HttpResponse response, LagreBeregnetSkattRequest lagreBeregnetSkattRequest) {
-        if (Response.Status.Family.familyOf(response.statusCode()).equals(Response.Status.Family.SUCCESSFUL)) {
+        if (isSuccessfulHttpResponse(response)) {
             incrementCounters(lagreBeregnetSkattRequest);
         } else if (Response.Status.UNAUTHORIZED.getStatusCode() == response.statusCode()) {
-            throw new RuntimeException(
-                    "Request to POPP failed with status: " + response.statusCode() + ", message:" + response.body() + ", for person:" + lagreBeregnetSkattRequest.getPersonIdent()
-                            + " , year: " + lagreBeregnetSkattRequest.getInntektsaar() + ". Crashing intentionally to try again on same user");
+            throw new CouldNotReachPoppException(response, lagreBeregnetSkattRequest);
         } else {
-            try {
-                int MAX_ATTEMPTS = 3;
-                int attempts = 1;
-                while (attempts <= MAX_ATTEMPTS) {
-                    response = invokePopp(lagreBeregnetSkattRequest);
-                    if (Response.Status.Family.familyOf(response.statusCode()).equals(Response.Status.Family.SUCCESSFUL)) {
-                        incrementCounters(lagreBeregnetSkattRequest);
-                        return;
-                    }
+            retryPoppOnUnsuccessfulResponse(lagreBeregnetSkattRequest);
+        }
+    }
 
-                    TimeUnit.MILLISECONDS.sleep(attempts * 200 * 2);
-                    attempts++;
-                }
-            } catch (InterruptedException e) {
+    private void retryPoppOnUnsuccessfulResponse(LagreBeregnetSkattRequest lagreBeregnetSkattRequest) {
+
+        for (int attempt = 1; attempt <= RETRY_ATTEMPTS; attempt++) {
+            if (isSuccessfulHttpResponse(invokePopp(lagreBeregnetSkattRequest))) {
+                incrementCounters(lagreBeregnetSkattRequest);
+                return;
             }
-            errorWhenIvokingPoppCounter.inc();
+            sleepFor(RETRY_ATTEMPTS * 200l * attempt);
+        }
+
+        errorWhenIvokingPoppCounter.inc();
+        LOG.error("Request to POPP failed after {} attempts for user for year {}  with inntektSKD {}", lagreBeregnetSkattRequest.getPersonIdent(),
+                lagreBeregnetSkattRequest.getInntektsaar(), lagreBeregnetSkattRequest.getInntektSKD());
+    }
+
+    private boolean isSuccessfulHttpResponse(HttpResponse response) {
+        return Response.Status.Family.familyOf(response.statusCode()).equals(Response.Status.Family.SUCCESSFUL);
+    }
+
+    private void sleepFor(long duration) {
+        try {
+            Thread.sleep(duration);
+        } catch (InterruptedException e) {
+            LOG.error(e.getMessage());
         }
     }
 
