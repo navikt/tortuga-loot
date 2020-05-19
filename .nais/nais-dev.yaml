@@ -2,21 +2,21 @@ apiVersion: "nais.io/v1alpha1"
 kind: "Application"
 metadata:
   name: tortuga-loot
-  namespace: {{namespace}}
+  namespace: default
   labels:
-    team: teampeon
+    team: pensjonsamhandling
 spec:
-  image: repo.adeo.no:5443/tortuga-loot:{{version}}
+  image: {{ image }}
   port: 8080
   ingresses:
-    - {{ingress}}
+    - https://tortuga-loot.nais.preprod.local
   liveness:
     path: isAlive
   readiness:
     path: isReady
   replicas:
     min: 3
-    max: 20
+    max: 10
   resources:
     limits:
       cpu: 1000m
