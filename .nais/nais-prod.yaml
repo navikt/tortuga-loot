@@ -1,0 +1,30 @@
+apiVersion: "nais.io/v1alpha1"
+kind: "Application"
+metadata:
+  name: tortuga-loot
+  namespace: default
+  labels:
+    team: pensjonsamhandling
+spec:
+  image: {{ image }}
+  port: 8080
+  ingresses:
+    - https://tortuga-loot.nais.adeo.no
+  liveness:
+    path: isAlive
+  readiness:
+    path: isReady
+  replicas:
+    min: 3
+    max: 10
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 384Mi
+    requests:
+      cpu: 100m
+      memory: 256Mi
+  vault:
+    enabled: true
+  prometheus:
+    enabled: true
