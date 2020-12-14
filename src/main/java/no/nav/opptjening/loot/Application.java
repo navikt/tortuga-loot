@@ -1,20 +1,18 @@
 package no.nav.opptjening.loot;
 
-import java.util.Map;
-import java.util.Properties;
-
+import io.prometheus.client.Counter;
+import no.nav.opptjening.loot.client.inntektskatt.InntektSkattClient;
+import no.nav.opptjening.nais.NaisHttpServer;
+import no.nav.opptjening.schema.PensjonsgivendeInntekt;
+import no.nav.opptjening.schema.skatt.hendelsesliste.HendelseKey;
 import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.kstream.KStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import io.prometheus.client.Counter;
-
-import no.nav.opptjening.loot.client.inntektskatt.InntektSkattClient;
-import no.nav.opptjening.nais.NaisHttpServer;
-import no.nav.opptjening.schema.PensjonsgivendeInntekt;
-import no.nav.opptjening.schema.skatt.hendelsesliste.HendelseKey;
+import java.util.Map;
+import java.util.Properties;
 
 public class Application {
 
@@ -84,8 +82,7 @@ public class Application {
 
         KStream<HendelseKey, PensjonsgivendeInntekt> stream = builder.stream(KafkaConfiguration.PENSJONSGIVENDE_INNTEKT_TOPIC);
         stream.mapValues((readOnlyKey, value) -> pensjonsgivendeInntektMapper.mapToInntektSkatt(value))
-                .mapValues((readOnlyKey, value) -> pensjonsgivendeInntektRecordMapper.mapToLagreBeregnetSkattRequest(readOnlyKey.getGjelderPeriode(),
-                        readOnlyKey.getIdentifikator(), value))
+                .mapValues((readOnlyKey, value) -> pensjonsgivendeInntektRecordMapper.mapToLagreBeregnetSkattRequest(readOnlyKey.getGjelderPeriode(), readOnlyKey.getIdentifikator(), value))
                 .foreach((key, value) -> {
 
                     pensjonsgivendeInntekterProcessed.labels(value.getInntektsaar()).inc();
@@ -105,8 +102,8 @@ public class Application {
         }
         shutdown = true;
 
-        streams.close();
         try {
+            streams.close();
             naisHttpServer.stop();
         } catch (Exception e) {
             LOG.error("Error while shutting down nais http server", e);

@@ -91,6 +91,7 @@ public class InntektSkattClient {
         errorWhenIvokingPoppCounter.inc();
         LOG.error("Request to POPP failed after 3 attempts for user {} for year {}  with inntektSKD {}", lagreBeregnetSkattRequest.getPersonIdent(),
                 lagreBeregnetSkattRequest.getInntektsaar(), lagreBeregnetSkattRequest.getInntektSKD());
+        throw new RuntimeException("Could not persist pensjonsgivende inntekt after trying 3 times. Crashing program");
     }
 
     private boolean isSuccessfulHttpResponse(HttpResponse response) {
