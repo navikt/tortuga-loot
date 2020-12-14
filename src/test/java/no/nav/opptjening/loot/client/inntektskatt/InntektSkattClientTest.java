@@ -1,7 +1,6 @@
 package no.nav.opptjening.loot.client.inntektskatt;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
@@ -55,7 +54,8 @@ class InntektSkattClientTest {
         when(errorResponse.statusCode()).thenReturn(500);
         when(httpClient.send(any(), any()))
                 .thenReturn(errorResponse);
-        inntektSkattClient.lagreInntektPopp(createRequest("01029804032", "2019"));
+
+        assertThrows(RuntimeException.class, () -> inntektSkattClient.lagreInntektPopp(createRequest("01029804032", "2019")));
         verify(tokenClient, times(4)).getAccessToken();
         verify(httpClient, times(4)).send(any(), any());
     }
