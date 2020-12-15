@@ -74,6 +74,7 @@ public class InntektSkattClient {
         } else if (Response.Status.UNAUTHORIZED.getStatusCode() == response.statusCode()) {
             throw new CouldNotReachPoppException(response, lagreBeregnetSkattRequest);
         } else {
+            LOG.info("Status code from popp when failing: " + response.statusCode() + ". Response body: " + response.body());
             retryPoppOnUnsuccessfulResponse(lagreBeregnetSkattRequest);
         }
     }
