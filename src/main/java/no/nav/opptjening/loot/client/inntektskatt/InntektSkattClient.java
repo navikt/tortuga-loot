@@ -73,6 +73,8 @@ public class InntektSkattClient {
             incrementCounters(lagreBeregnetSkattRequest);
         } else if (Response.Status.UNAUTHORIZED.getStatusCode() == response.statusCode()) {
             throw new CouldNotReachPoppException(response, lagreBeregnetSkattRequest);
+        }else if(response.statusCode() == Response.Status.BAD_REQUEST.getStatusCode()){
+            LOG.error("Request to popp failed with status: "+response.statusCode()+ " and body: " + response.body() + ". Discarding inntekt request: "+ gson.toJson(lagreBeregnetSkattRequest));
         } else {
             LOG.info("Status code from popp when failing: " + response.statusCode() + ". Response body: " + response.body());
             retryPoppOnUnsuccessfulResponse(lagreBeregnetSkattRequest);
